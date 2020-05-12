@@ -73,10 +73,10 @@ contact_matrix_long <- contact_matrix %>%
   transform(age_grp = as.numeric(age_grp)) %>%
   transform(other_age_grp = as.numeric(other_age_grp))
 
-ggplot(contact_matrix_long, aes(x = other_age_grp, y = age_grp, fill = contact)) + 
+ggplot(contact_matrix_long, aes(x = age_grp, y = other_age_grp, fill = contact)) + 
   geom_tile(colour = "white") +
   viridis::scale_fill_viridis() +
-  theme_minimal()
+  theme_minimal() 
 ```
 
 ## Running custom models
