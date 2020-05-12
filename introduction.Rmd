@@ -1,0 +1,95 @@
+---
+title: "Intro to SQUIRE models"
+output: pdf_document
+---
+
+Experimenting with the `squire` package to model covid in India. The model has a number of parameters that we can tweak:
+  1. R0
+  2. Demography
+  3. Contact matrices
+  4. The durations of each compartment 
+  5. The health care outcomes
+  6. The healthcare availability
+
+In addition, the initial state of the population can be changed as well.
+
+It also has the following simulation parameters:
+  1. Number of replicates
+  2. Length of simulation
+  3. Timestep
+
+
+# Setup
+
+Install dependencies and load the library
+
+## Install dependencies
+
+You only need to run this the first time around.
+
+```{r}
+
+#install.packages("odin")
+#install.packages("devtools")
+#install.packages("tidyverse")
+#devtools::install_github("mrc-ide/squire")
+
+```
+
+## Load packages
+
+```{r}
+suppressPackageStartupMessages({
+  library(squire)
+  library(tidyverse)
+  library(ggplot2)
+})
+```
+
+# Running models
+
+The squire model has a bunch of parameters that you can tune. But you can also run it using the parameters for the country of interest specified in [report 12.](https://www.imperial.ac.uk/mrc-global-infectious-disease-analysis/covid-19/report-12-global-impact-covid-19/)
+
+## Running the base model
+
+It's quite easy to run the base India model:
+
+```{r}
+r <- run_explicit_SEEIR_model(country = "India")
+```
+
+Let's see what the default parameters were
+
+```{r}
+params <- r$parameters
+names <- seq(5, 80, by = 5) #lapply(seq(0, 79, by = 5), function(x) paste0(x, "-", x+5))
+contact_matrix <- as.data.frame(params$contact_matrix_set[[1]])
+rownames(contact_matrix) <- names
+colnames(contact_matrix) <- names
+
+contact_matrix_long <- contact_matrix %>% 
+  rownames_to_column(var = "age_grp") %>%
+  gather("other_age_grp", "contact", -age_grp) %>%
+  transform(age_grp = as.numeric(age_grp)) %>%
+  transform(other_age_grp = as.numeric(other_age_grp))
+
+ggplot(contact_matrix_long, aes(x = other_age_grp, y = age_grp, fill = contact)) + 
+  geom_tile(colour = "white") +
+  viridis::scale_fill_viridis() +
+  theme_minimal()
+```
+
+## Running custom models
+
+If we want to run it at the state level, we can change the population numbers and even distribution. We can also update the contact matrix and inital number of cases to seed the epidemic. 
+
+See the [full model documentation](https://mrc-ide.github.io/squire/reference/run_explicit_SEEIR_model.html) for more details.
+
+Most of the interventions studied in the paper involve manipulating this contact matrix. You can set the time stamp at which you want to switch to a different contact matrix. So as different social distancing policies are implemented, we expect this matrix to evolve.
+
+Similarly we can change R0, ICU beds, and hospital beds at different time points to simulate spread control (masks?) and increase in available capacity as the government redirect resources. These can only be modelled as discrete step changes.
+
+## Economic impact
+
+Ideally, we'd want the loss of income to be modelled based on this contact matrix. And built a simple model where the loss in income is equal to the loss because of disease burden + loss because of loss of income. We could even group this to a household level.
+
