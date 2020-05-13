@@ -27,6 +27,7 @@ df['X'] <- seq_len(nrow(df))
 int_unique <- list(dates_change = c("2020-03-24"), # Day of lockdown
                    change = c(0.2))
 
+# Basic model; India generic contact matrix
 out <- calibrate(
   data = df,
   R0_min = 0.5,
@@ -54,15 +55,16 @@ plot(out, 'deaths', particle_fit = TRUE) +
   ggtitle(label = "Delhi")
 
 # Note date of national lockdown
-natl_lockdown <- as.numeric(as.Date("2020-03-24"))
+natl.lockdown <- as.numeric(as.Date("2020-03-24"))
 
 # Plot Delhi infections
 plot(out, 'infections', date_0 = max(df$date), x_var = "date") + 
-  labs(title = "Delhi infections",
-       subtitle = "[subtitle]",
+  labs(title = "Estimated new cases in Delhi, based on known deaths",
+       #subtitle = "",
        caption = "[caption]") +
-  ylab("Infections") +
-  geom_vline(xintercept = natl_lockdown, linetype=4) +
+  ylab("Daily new infections") +
+  geom_line(data = df, aes(x = date, y = cases)) +
+  geom_vline(xintercept = natl.lockdown, linetype=4) +
   annotate("text", x = as.Date("2020-03-23"), y = 800, 
            label = "Nat'l lock-\ndown begins", size = 3, 
            fontface = 'italic', hjust = 1) +
