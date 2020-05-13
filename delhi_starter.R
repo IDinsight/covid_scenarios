@@ -10,7 +10,7 @@ pop_vector <- pop_dist$total_persons[-18] %>%  # exclude "age not stated" in row
   as.character %>% 
   str_remove_all(",") %>% 
   as.integer
-state_wise_data <- read.csv("./data/state_wise_daily.csv")
+state_wise_data <- read.csv("https://api.covid19india.org/csv/latest/state_wise_daily.csv")
 india_params_list <- parameters_explicit_SEEIR('India')
 
 # Setup data
@@ -24,20 +24,24 @@ names(state_data) <- c("date", "cases", "recovered", "deaths")
 df <- state_data[c("date", "deaths", "cases")]
 df['X'] <- seq_len(nrow(df))
 
-int_unique <- list(dates_change = c("2020-03-24"), # Day of lockdown
-                   change = c(0.2))
+# Note date of national lockdown
+natl.lockdown <- as.numeric(as.Date("2020-03-24"))
+natl.lockdown.relaxed <- as.numeric(as.Date("2020-05-03"))
+
+int_unique <- list(dates_change = c("2020-03-17", "2020-03-24", "2020-05-03"), # Day of lockdown
+                   change = c(0.5, 0.2, 0.3))
 
 # Basic model; India generic contact matrix
 out <- calibrate(
   data = df,
-  R0_min = 0.5,
-  R0_max = 7,
+  R0_min = 2,
+  R0_max = 10,
   R0_step = 0.5,
   first_start_date = "2020-03-02",
-  last_start_date = "2020-03-10",
+  last_start_date = "2020-03-12",
   day_step = 1,
-  replicates = 10,
-  n_particles = 100,
+  replicates = 20,
+  n_particles = 20,
   population = pop_vector,
   forecast = 14,
   baseline_contact_matrix  = india_params_list$contact_matrix_set,
@@ -50,12 +54,20 @@ out <- calibrate(
 # Reload model if applicable
 #out <- load(file = "/tmp/delhi_out_1205.rda")
 
+plot(out$scan_results)
+
 # Plot with particle fit
 plot(out, 'deaths', particle_fit = TRUE) + 
-  ggtitle(label = "Delhi")
+  ggtitle(label = "Delhi: Deaths per day") +
+  geom_vline(xintercept = natl.lockdown, linetype=4) +
+  annotate("text", x = as.Date("2020-03-23"), y = 10, 
+           label = "Nat'l lock-\ndown begins", size = 3, 
+           fontface = 'italic', hjust = 1) +
+  geom_vline(xintercept = natl.lockdown.relaxed, linetype=4) +
+  annotate("text", x = as.Date("2020-05-01"), y = 10, 
+           label = "Nat'l lock-\ndown relaxed", size = 3, 
+           fontface = 'italic', hjust = 1) 
 
-# Note date of national lockdown
-natl.lockdown <- as.numeric(as.Date("2020-03-24"))
 
 # Plot Delhi infections
 plot(out, 'infections', date_0 = max(df$date), x_var = "date") + 
@@ -65,9 +77,14 @@ plot(out, 'infections', date_0 = max(df$date), x_var = "date") +
   ylab("Daily new infections") +
   geom_line(data = df, aes(x = date, y = cases)) +
   geom_vline(xintercept = natl.lockdown, linetype=4) +
-  annotate("text", x = as.Date("2020-03-23"), y = 800, 
+  annotate("text", x = as.Date("2020-03-23"), y = 2000, 
            label = "Nat'l lock-\ndown begins", size = 3, 
            fontface = 'italic', hjust = 1) +
+  geom_vline(xintercept = natl.lockdown.relaxed, linetype=4) +
+  annotate("text", x = as.Date("2020-05-01"), y = 2000, 
+           label = "Nat'l lock-\ndown relaxed", size = 3, 
+           fontface = 'italic', hjust = 1) +
   theme(legend.position = "none")  # suppress legend
+
 
 
