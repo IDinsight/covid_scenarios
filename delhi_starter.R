@@ -49,11 +49,6 @@ out <- calibrate(
   date_R0_change = int_unique$dates_change
 )
 
-# Save model locally to avoid re-running grid search in new sessions
-#save(out, file = "/tmp/delhi_out_1205.rda") # this doesn't work??
-# Reload model if applicable
-#out <- load(file = "/tmp/delhi_out_1205.rda")
-
 plot(out$scan_results)
 
 # Plot with particle fit
@@ -86,5 +81,84 @@ plot(out, 'infections', date_0 = max(df$date), x_var = "date") +
            fontface = 'italic', hjust = 1) +
   theme(legend.position = "none")  # suppress legend
 
+'
+# Original India contact matrix
+india_default_matrix <- india_params_list$contact_matrix_set
+names <- seq(5, 80, by = 5) 
+original_matrix <- as.data.frame(india_default_matrix[[1]])
+rownames(original_matrix) <- names
+colnames(original_matrix) <- names
+
+original_matrix_long <- original_matrix %>% 
+  rownames_to_column(var = "age_grp") %>%
+  gather("other_age_grp", "contact", -age_grp) %>%
+  transform(age_grp = as.numeric(age_grp)) %>%
+  transform(other_age_grp = as.numeric(other_age_grp))
+
+ggplot(original_matrix_long, aes(x = age_grp, y = other_age_grp, fill = contact)) + 
+  geom_tile(colour = "white") +
+  viridis::scale_fill_viridis() +
+  theme_minimal() +
+  ggtitle("Contact matrix (India default)")
+'
+
+# Visualize contact matrix
+
+matrix_viz <- function(matrix_df) {
+  
+  names <- seq(5, 80, by = 5) 
+  rownames(matrix_df) <- names
+  colnames(matrix_df) <- names
+  
+  matrix_df_long <- matrix_df %>% 
+    rownames_to_column(var = "age_grp") %>%
+    gather("other_age_grp", "contact", -age_grp) %>%
+    transform(age_grp = as.numeric(age_grp)) %>%
+    transform(other_age_grp = as.numeric(other_age_grp))
+  
+  return(
+  ggplot(matrix_df_long, aes(x = age_grp, y = other_age_grp, fill = contact)) + 
+    geom_tile(colour = "white") +
+    
+    viridis::scale_fill_viridis( 
+      # HARD-CODE to make any vals above 3 show up as maximal yellow
+      rescaler = function(x, to = c(0, 1), from = NULL) {
+        ifelse(x < 3, scales::rescale(x, to = to, from = c(min(x, na.rm = TRUE), 3)), 1)}
+      ) + 
+    theme_minimal()
+  )
+  
+}
 
 
+# Diminish all contacts to 20% but open up schools for 5-9, 10-14, 15-19
+
+open_schools <- function(old_matrix_df, reduction_rate) {
+  
+  # Take original contact matrix (dataframe), return
+  # new one at given contact reduction (e.g. 0.2, 0.5),
+  # but keep o.g. values for 5-9, 10-14, 15-19 age groups.
+  
+  
+  new_matrix_df <- old_matrix * 0.2
+  
+  for (i in seq(1, 3)) {
+    new_matrix_df[i, i] <- old_matrix_df[i, i]
+  }
+  
+  return(new_matrix_df)
+}
+
+india_default_matrix_df <- as.data.frame(india_default_matrix[[1]])
+
+twenty_perc_df <- original_matrix_df * 0.2
+twenty_perc_schools_open_df <- open_schools(original_matrix_df, 0.2)
+
+matrix_viz(india_default_matrix_df) +
+  ggtitle("Contact matrix: India standard contact levels")
+
+matrix_viz(twenty_perc_df) +
+  ggtitle("Contact matrix: 20% of India standard contact levels")
+
+matrix_viz(twenty_perc_schools_open_df) +
+  ggtitle("Contact matrix: 20% of India standard contact levels, \nwith schools open")
