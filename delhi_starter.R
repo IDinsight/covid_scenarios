@@ -155,7 +155,7 @@ matrix_viz(india_default_matrix_df) +
 ggsave("tmp/matrix_india_standard.png")
 
 matrix_viz(twenty_perc_df) +
-  ggtitle("Simple lockdown assumption")
+  ggtitle("Simple lockdown assumption \n(20% standard contact)")
   #labs(subtitle = bquote("20% of typical contact behaviour"^2))
 
 ggsave("tmp/matrix_20_percent.png")
@@ -167,10 +167,8 @@ matrix_viz(fifty_perc_df) +
 ggsave("tmp/matrix_50_percent.png")
 
 matrix_viz(twenty_perc_schools_open_df) +
-  labs(title = bquote("Extended lockdown with \mschools open")^3) +
+  ggtitle("Extended lockdown with \nschools open") 
        #subtitle = bquote("General public at 20% of standard behaviour; children at 100%"^3)) +
-  theme(plot.title = element_text(size = 12, face = 'bold'),
-        plot.subtitle = element_text(size = 10))
 
 ggsave("tmp/matrix_20_percent_children.png")
 
@@ -251,19 +249,60 @@ out3 <- calibrate(
 ############################## NEW MODEL PLOTTING
 #################################################
 
+# With 20% contact under lockdown, and full release afterwards
 
-plot(out3, 'infections', date_0 = max(df$date), x_var = "date") + 
-  labs(title = "Estimated new cases in Delhi, based on known deaths",
-       #subtitle = "",
-       caption = "[caption]") +
+plot(out1, 'infections', date_0 = max(df$date), x_var = "date") + 
+  labs(title = "Projected daily infections, given lockdown total cessation",
+       subtitle = "Assume no social distancing after May 10") +
   ylab("Daily new infections") +
-  geom_line(data = df, aes(x = date, y = cases)) +
+  #geom_line(data = df, aes(x = date, y = cases)) +
   geom_vline(xintercept = natl.lockdown, linetype=4) +
-  annotate("text", x = as.Date("2020-03-23"), y = 2000, 
-           label = "Nat'l lock-\ndown begins", size = 3, 
+  annotate("text", x = as.Date("2020-03-23"), y = 420000, 
+           label = "Nat'l lock-\ndown begins\n(24/03)", size = 3, 
            fontface = 'italic', hjust = 1) +
   geom_vline(xintercept = natl.lockdown.relaxed, linetype=4) +
-  annotate("text", x = as.Date("2020-05-09"), y = 2000, 
-           label = "Nat'l lock-\ndown relaxed", size = 3, 
+  annotate("text", x = as.Date("2020-05-09"), y = 420000, 
+           label = "Nat'l lock-\ndown ends\n(10/05)", size = 3, 
            fontface = 'italic', hjust = 1) +
   theme(legend.position = "none")  # suppress legend
+
+ggsave("tmp/may_10_lockdown_ends.png")
+
+# With 20% contact under lockdown, and 50% after relaxing
+
+plot(out2, 'infections', date_0 = max(df$date), x_var = "date") + 
+  labs(title = "Projected daily infections, given relaxed social distancing",
+       subtitle = "Assume 50% of standard contact resumes 10 May") +
+  ylab("Daily new infections") +
+  #geom_line(data = df, aes(x = date, y = cases)) +
+  geom_vline(xintercept = natl.lockdown, linetype=4) +
+  annotate("text", x = as.Date("2020-03-23"), y = 40000, 
+           label = "Nat'l lock-\ndown begins\n(24/03)", size = 3, 
+           fontface = 'italic', hjust = 1) +
+  geom_vline(xintercept = natl.lockdown.relaxed, linetype=4) +
+  annotate("text", x = as.Date("2020-05-09"), y = 40000, 
+           label = "Nat'l lock-\ndown relaxed\n(10/05)", size = 3, 
+           fontface = 'italic', hjust = 1) +
+  theme(legend.position = "none")  # suppress legend
+
+ggsave("tmp/may_10_lockdown_relax.png")
+
+# With 20% contact under lockdown, and only schoolchildren
+# resuming full contact after May 10th 
+
+plot(out3, 'infections', date_0 = max(df$date), x_var = "date") + 
+  labs(title = "Projected daily infections, given only school reopening",
+       subtitle = "Assume adults stay in lockdown but students 5-19 return to school") +
+  ylab("Daily new infections") +
+  #geom_line(data = df, aes(x = date, y = cases)) +
+  geom_vline(xintercept = natl.lockdown, linetype=4) +
+  annotate("text", x = as.Date("2020-03-23"), y = 35000, 
+           label = "Nat'l lock-\ndown begins\n(24/03)", size = 3, 
+           fontface = 'italic', hjust = 1) +
+  geom_vline(xintercept = natl.lockdown.relaxed, linetype=4) +
+  annotate("text", x = as.Date("2020-05-09"), y = 35000, 
+           label = "Students return\nto school\n(10/05)", size = 3, 
+           fontface = 'italic', hjust = 1) +
+  theme(legend.position = "none")  # suppress legend
+
+ggsave("tmp/may_10_school_resumes.png")
