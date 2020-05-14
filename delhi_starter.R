@@ -4,6 +4,9 @@ library(squire)
 library(tidyverse)
 library(ggplot2)
 
+########################################### SETUP
+#################################################
+
 pop_dist <- read.csv("./data/delhi_pop.csv")
 
 pop_vector <- pop_dist$total_persons[-18] %>%  # exclude "age not stated" in row 18
@@ -24,9 +27,12 @@ names(state_data) <- c("date", "cases", "recovered", "deaths")
 df <- state_data[c("date", "deaths", "cases")]
 df['X'] <- seq_len(nrow(df))
 
-# Note date of national lockdown
+################################ INITIAL MODELLING
+##################################################
+
+# Dates of interventions
 natl.lockdown <- as.numeric(as.Date("2020-03-24"))
-natl.lockdown.relaxed <- as.numeric(as.Date("2020-05-03"))
+natl.lockdown.relaxed <- as.numeric(as.Date("2020-05-10"))
 
 int_unique <- list(dates_change = c("2020-03-17", "2020-03-24", "2020-05-03"), # Day of lockdown
                    change = c(0.5, 0.2, 0.3))
@@ -81,26 +87,32 @@ plot(out, 'infections', date_0 = max(df$date), x_var = "date") +
            fontface = 'italic', hjust = 1) +
   theme(legend.position = "none")  # suppress legend
 
-'
-# Original India contact matrix
-india_default_matrix <- india_params_list$contact_matrix_set
-names <- seq(5, 80, by = 5) 
-original_matrix <- as.data.frame(india_default_matrix[[1]])
-rownames(original_matrix) <- names
-colnames(original_matrix) <- names
+################################# CONTACT MATRICES
+##################################################
 
-original_matrix_long <- original_matrix %>% 
-  rownames_to_column(var = "age_grp") %>%
-  gather("other_age_grp", "contact", -age_grp) %>%
-  transform(age_grp = as.numeric(age_grp)) %>%
-  transform(other_age_grp = as.numeric(other_age_grp))
+# Diminish all contacts to 20% but open up schools for 5-9, 10-14, 15-19
 
-ggplot(original_matrix_long, aes(x = age_grp, y = other_age_grp, fill = contact)) + 
-  geom_tile(colour = "white") +
-  viridis::scale_fill_viridis() +
-  theme_minimal() +
-  ggtitle("Contact matrix (India default)")
-'
+open_schools <- function(old_matrix_df, reduction_rate) {
+  
+  # Take original contact matrix (dataframe), return
+  # new one at given contact reduction (e.g. 0.2, 0.5),
+  # but keep o.g. values for 5-9, 10-14, 15-19 age groups.
+  
+  new_matrix_df <- old_matrix * 0.2
+  
+  for (i in seq(1, 3)) {
+    new_matrix_df[i, i] <- old_matrix_df[i, i]
+  }
+  
+  return(new_matrix_df)
+}
+
+india_default_matrix_df <- as.data.frame(india_default_matrix[[1]])
+
+fifty_perc_df <- original_matrix_df * 0.5
+twenty_perc_df <- original_matrix_df * 0.2
+twenty_perc_schools_open_df <- open_schools(original_matrix_df, 0.2)
+
 
 # Visualize contact matrix
 
@@ -117,48 +129,141 @@ matrix_viz <- function(matrix_df) {
     transform(other_age_grp = as.numeric(other_age_grp))
   
   return(
-  ggplot(matrix_df_long, aes(x = age_grp, y = other_age_grp, fill = contact)) + 
-    geom_tile(colour = "white") +
-    
-    viridis::scale_fill_viridis( 
-      # HARD-CODE to make any vals above 3 show up as maximal yellow
-      rescaler = function(x, to = c(0, 1), from = NULL) {
-        ifelse(x < 3, scales::rescale(x, to = to, from = c(min(x, na.rm = TRUE), 3)), 1)}
+    ggplot(matrix_df_long, aes(x = age_grp, y = other_age_grp, fill = contact)) + 
+      geom_tile(colour = "white") +
+      
+      viridis::scale_fill_viridis( 
+        # HARD-CODE to make any vals above 3 show up as maximal yellow
+        rescaler = function(x, to = c(0, 1), from = NULL) {
+          ifelse(x < 3, scales::rescale(x, to = to, from = c(min(x, na.rm = TRUE), 3)), 1)}
       ) + 
-    theme_minimal()
+      theme_minimal() +
+      theme(plot.title = element_text(size = 12, face = 'bold')) +
+      coord_fixed(ratio = 1.2) +
+      xlab("Age group") +
+      ylab("Other age group")
   )
   
 }
 
-
-# Diminish all contacts to 20% but open up schools for 5-9, 10-14, 15-19
-
-open_schools <- function(old_matrix_df, reduction_rate) {
-  
-  # Take original contact matrix (dataframe), return
-  # new one at given contact reduction (e.g. 0.2, 0.5),
-  # but keep o.g. values for 5-9, 10-14, 15-19 age groups.
-  
-  
-  new_matrix_df <- old_matrix * 0.2
-  
-  for (i in seq(1, 3)) {
-    new_matrix_df[i, i] <- old_matrix_df[i, i]
-  }
-  
-  return(new_matrix_df)
-}
-
-india_default_matrix_df <- as.data.frame(india_default_matrix[[1]])
-
-twenty_perc_df <- original_matrix_df * 0.2
-twenty_perc_schools_open_df <- open_schools(original_matrix_df, 0.2)
+# Visualize matrices for different options
 
 matrix_viz(india_default_matrix_df) +
-  ggtitle("Contact matrix: India standard contact levels")
+  ggtitle("India standard \ncontact patterns")
+  #labs(subtitle = bquote("Contact behaviour based on 2018 Haryana survey"^1))
+
+ggsave("tmp/matrix_india_standard.png")
 
 matrix_viz(twenty_perc_df) +
-  ggtitle("Contact matrix: 20% of India standard contact levels")
+  ggtitle("Simple lockdown assumption")
+  #labs(subtitle = bquote("20% of typical contact behaviour"^2))
+
+ggsave("tmp/matrix_20_percent.png")
+
+matrix_viz(fifty_perc_df) +
+  ggtitle("Simple relaxed lockdown \nassumption") 
+  #labs(subtitle = "50% of typical contact behaviour")
+
+ggsave("tmp/matrix_50_percent.png")
 
 matrix_viz(twenty_perc_schools_open_df) +
-  ggtitle("Contact matrix: 20% of India standard contact levels, \nwith schools open")
+  labs(title = bquote("Extended lockdown with \mschools open")^3) +
+       #subtitle = bquote("General public at 20% of standard behaviour; children at 100%"^3)) +
+  theme(plot.title = element_text(size = 12, face = 'bold'),
+        plot.subtitle = element_text(size = 10))
+
+ggsave("tmp/matrix_20_percent_children.png")
+
+###################################### NEW MODELS
+#################################################
+
+# With 20% contact under lockdown, and full release afterwards
+
+int_unique1 <- list(dates_change = c("2020-03-24", "2020-05-10"), 
+                    change = list(data.matrix(twenty_perc_df), 
+                                 data.matrix(india_default_matrix_df)))
+
+out1 <- calibrate(
+  data = df,
+  R0_min = 2,
+  R0_max = 10,
+  R0_step = 0.5,
+  first_start_date = "2020-03-02",
+  last_start_date = "2020-03-12",
+  day_step = 1,
+  replicates = 20,
+  n_particles = 20,
+  population = pop_vector,
+  forecast = 14,
+  baseline_contact_matrix = data.matrix(india_default_matrix_df),
+  contact_matrix_set = int_unique$change,
+  date_contact_matrix_set_change = int_unique$dates_change,
+)
+
+# With 20% contact under lockdown, and 50% after relaxing
+
+int_unique2 <- list(dates_change = c("2020-03-24", "2020-05-10"), 
+                    change = list(data.matrix(twenty_perc_df), 
+                                  data.matrix(fifty_perc_df)))
+
+out2 <- calibrate(
+  data = df,
+  R0_min = 2,
+  R0_max = 10,
+  R0_step = 0.5,
+  first_start_date = "2020-03-02",
+  last_start_date = "2020-03-12",
+  day_step = 1,
+  replicates = 20,
+  n_particles = 20,
+  population = pop_vector,
+  forecast = 14,
+  baseline_contact_matrix = data.matrix(india_default_matrix_df),
+  contact_matrix_set = int_unique$change,
+  date_contact_matrix_set_change = int_unique$dates_change,
+)
+
+# With 20% contact under lockdown, and only schoolchildren
+# resuming full contact after May 10th (demo purposes only; a lot
+# of wonky assumptions here)
+
+int_unique3 <- list(dates_change = c("2020-03-24", "2020-05-10"), 
+                    change = list(data.matrix(twenty_perc_df), 
+                                  data.matrix(twenty_perc_schools_open_df)))
+
+out3 <- calibrate(
+  data = df,
+  R0_min = 2,
+  R0_max = 10,
+  R0_step = 0.5,
+  first_start_date = "2020-03-02",
+  last_start_date = "2020-03-12",
+  day_step = 1,
+  replicates = 20,
+  n_particles = 20,
+  population = pop_vector,
+  forecast = 14,
+  baseline_contact_matrix = data.matrix(india_default_matrix_df),
+  contact_matrix_set = int_unique$change,
+  date_contact_matrix_set_change = int_unique$dates_change,
+)
+
+############################## NEW MODEL PLOTTING
+#################################################
+
+
+plot(out3, 'infections', date_0 = max(df$date), x_var = "date") + 
+  labs(title = "Estimated new cases in Delhi, based on known deaths",
+       #subtitle = "",
+       caption = "[caption]") +
+  ylab("Daily new infections") +
+  geom_line(data = df, aes(x = date, y = cases)) +
+  geom_vline(xintercept = natl.lockdown, linetype=4) +
+  annotate("text", x = as.Date("2020-03-23"), y = 2000, 
+           label = "Nat'l lock-\ndown begins", size = 3, 
+           fontface = 'italic', hjust = 1) +
+  geom_vline(xintercept = natl.lockdown.relaxed, linetype=4) +
+  annotate("text", x = as.Date("2020-05-09"), y = 2000, 
+           label = "Nat'l lock-\ndown relaxed", size = 3, 
+           fontface = 'italic', hjust = 1) +
+  theme(legend.position = "none")  # suppress legend
