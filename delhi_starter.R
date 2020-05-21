@@ -306,3 +306,6 @@ plot(out3, 'infections', date_0 = max(df$date), x_var = "date") +
   theme(legend.position = "none")  # suppress legend
 
 ggsave("tmp/may_10_school_resumes.png")
+
+
+
