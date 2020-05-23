@@ -1,3 +1,3 @@
-# Economic modeling for covid polict decision
+# Economic modeling for covid policy decision
 
 The repository has scripts to model state level intervention.
