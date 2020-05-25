@@ -1,0 +1,12 @@
+name: shiny
+title:
+username:
+account: nvernonapps
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2355175
+bundleId: 3189003
+url: https://nvernonapps.shinyapps.io/shiny/
+when: 1590446957.56551
+asMultiple: FALSE
+asStatic: FALSE
