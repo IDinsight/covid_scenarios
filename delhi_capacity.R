@@ -68,7 +68,8 @@ out <- calibrate(
 
 plot(out, var_select = "hospital_occupancy", 
           date_0 = max(df$date), x_var = "date") +
-      labs(title = "Projection for hospital bed occupancy") +
+      labs(title = "Projection for hospital bed occupancy",
+           subtitle = "Assuming lockdown on 24 Mar and mild relaxation on 3 May") +
       ylab("No. of beds") +
       xlab("Date") +
       geom_hline(yintercept = hosp_bed, linetype = 4) + # show bed capacity line
@@ -102,7 +103,8 @@ ggsave("tmp/hosp_occupancy.png")
 
 plot(out, var_select = "ICU_occupancy", 
               date_0 = max(df$date), x_var = "date") + 
-      labs(title = "Projection for ICU bed occupancy") + 
+      labs(title = "Projection for ICU bed occupancy",
+           subtitle = "Assuming lockdown on 24 Mar and mild relaxation on 3 May") + 
       ylab("No. of beds") +
       xlab("Date") + 
       geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
