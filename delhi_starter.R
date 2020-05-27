@@ -194,7 +194,7 @@ out1 <- calibrate(
   population = pop_vector,
   forecast = 14,
   baseline_contact_matrix = data.matrix(india_default_matrix_df),
-  contact_matrix_set = int_unique$change,
+  contact_matrix_set = int_unique1$change,
   date_contact_matrix_set_change = int_unique$dates_change,
 )
 
@@ -217,8 +217,8 @@ out2 <- calibrate(
   population = pop_vector,
   forecast = 14,
   baseline_contact_matrix = data.matrix(india_default_matrix_df),
-  contact_matrix_set = int_unique$change,
-  date_contact_matrix_set_change = int_unique$dates_change,
+  contact_matrix_set = int_unique2$change,
+  date_contact_matrix_set_change = int_unique2$dates_change,
 )
 
 # With 20% contact under lockdown, and only schoolchildren
@@ -242,8 +242,8 @@ out3 <- calibrate(
   population = pop_vector,
   forecast = 14,
   baseline_contact_matrix = data.matrix(india_default_matrix_df),
-  contact_matrix_set = int_unique$change,
-  date_contact_matrix_set_change = int_unique$dates_change,
+  contact_matrix_set = int_unique3$change,
+  date_contact_matrix_set_change = int_unique3$dates_change,
 )
 
 ############################## NEW MODEL PLOTTING
