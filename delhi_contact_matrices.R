@@ -155,5 +155,9 @@ phase1_matrix <- squire_matrix * phase1_discount_matrix
 # May 31) is 10% increase up from phase1_matrix.
 phase3_matrix <- phase1_matrix * 1.1
 
+# Save matrices
+write.csv(phase1_matrix, "matrices/delhi/phase1_matrix.csv", row.names = FALSE)
+write.csv(phase3_matrix, "matrices/delhi/phase3_matrix.csv", row.names = FALSE)
+
 
 
