@@ -14,16 +14,28 @@ This file does the following:
     change factor.
 '
 
-
 # Grab NCAER survey results (just outside contacts)
-ncaer <- read_excel("data/DCVTS2_delhi_contacts.xlsx") %>%
-  as.data.frame
+ncaer_outside <- as.data.frame(read_excel("data/DCVTS2_delhi_contacts.xlsx", 
+                               sheet = "Outside")) 
+
+ncaer_inside <- as.data.frame(read_excel("data/DCVTS2_delhi_contacts.xlsx", 
+                              sheet = "Inside"))
+
+# Merge outside and inside datasets, first making unique id to merge on
+ncaer_outside$id <- paste(ncaer_outside$`Age of respondent`, ncaer_outside$`Contacts outside`)
+ncaer_inside$id  <- paste(ncaer_inside$`Age of respondent`, ncaer_inside$`Contacts inside`)
+ncaer <- merge(x = ncaer_outside, y = ncaer_inside, by = "id", all = FALSE) 
 
 # Change all "<= 10" values to 12 -- arbitrarily assuming avg 10+ is 12
 ncaer$`Contacts outside`[!ncaer$`Contacts outside` %in% as.character(0:9)] <- 12
+ncaer$`Contacts inside`[!ncaer$`Contacts inside` %in% as.character(0:9)] <- 12
 
-# Make `Contacts outside` values numeric
+# Make Contacts values numeric
 ncaer$`Contacts outside` <- as.numeric(ncaer$`Contacts outside`)
+ncaer$`Contacts inside` <- as.numeric(ncaer$`Contacts inside`)
+
+
+######################################################### HERE IS WHERE I STOPPED
 
 # Create new column for no. of contacts x rate of frequency
 ncaer$weighted_sum <- ncaer$`Contacts outside` * ncaer$Freq
