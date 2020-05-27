@@ -27,66 +27,6 @@ names(state_data) <- c("date", "cases", "recovered", "deaths")
 df <- state_data[c("date", "deaths", "cases")]
 df['X'] <- seq_len(nrow(df))
 
-################################ INITIAL MODELLING
-##################################################
-
-# Dates of interventions
-natl.lockdown <- as.numeric(as.Date("2020-03-24"))
-natl.lockdown.relaxed <- as.numeric(as.Date("2020-05-10"))
-
-int_unique <- list(dates_change = c("2020-03-17", "2020-03-24", "2020-05-03"), # Day of lockdown
-                   change = c(0.5, 0.2, 0.3))
-
-# Basic model; India generic contact matrix
-out <- calibrate(
-  data = df,
-  R0_min = 2,
-  R0_max = 10,
-  R0_step = 0.5,
-  first_start_date = "2020-03-02",
-  last_start_date = "2020-03-12",
-  day_step = 1,
-  replicates = 20,
-  n_particles = 20,
-  population = pop_vector,
-  forecast = 14,
-  baseline_contact_matrix  = india_params_list$contact_matrix_set,
-  R0_change = int_unique$change,
-  date_R0_change = int_unique$dates_change
-)
-
-plot(out$scan_results)
-
-# Plot with particle fit
-plot(out, 'deaths', particle_fit = TRUE) + 
-  ggtitle(label = "Delhi: Deaths per day") +
-  geom_vline(xintercept = natl.lockdown, linetype=4) +
-  annotate("text", x = as.Date("2020-03-23"), y = 10, 
-           label = "Nat'l lock-\ndown begins", size = 3, 
-           fontface = 'italic', hjust = 1) +
-  geom_vline(xintercept = natl.lockdown.relaxed, linetype=4) +
-  annotate("text", x = as.Date("2020-05-01"), y = 10, 
-           label = "Nat'l lock-\ndown relaxed", size = 3, 
-           fontface = 'italic', hjust = 1) 
-
-
-# Plot Delhi infections
-plot(out, 'infections', date_0 = max(df$date), x_var = "date") + 
-  labs(title = "Estimated new cases in Delhi, based on known deaths",
-       #subtitle = "",
-       caption = "[caption]") +
-  ylab("Daily new infections") +
-  geom_line(data = df, aes(x = date, y = cases)) +
-  geom_vline(xintercept = natl.lockdown, linetype=4) +
-  annotate("text", x = as.Date("2020-03-23"), y = 2000, 
-           label = "Nat'l lock-\ndown begins", size = 3, 
-           fontface = 'italic', hjust = 1) +
-  geom_vline(xintercept = natl.lockdown.relaxed, linetype=4) +
-  annotate("text", x = as.Date("2020-05-01"), y = 2000, 
-           label = "Nat'l lock-\ndown relaxed", size = 3, 
-           fontface = 'italic', hjust = 1) +
-  theme(legend.position = "none")  # suppress legend
-
 ################################# CONTACT MATRICES
 ##################################################
 
@@ -98,7 +38,7 @@ open_schools <- function(old_matrix_df, reduction_rate) {
   # new one at given contact reduction (e.g. 0.2, 0.5),
   # but keep o.g. values for 5-9, 10-14, 15-19 age groups.
   
-  new_matrix_df <- old_matrix * 0.2
+  new_matrix_df <- old_matrix_df * 0.2
   
   for (i in seq(1, 3)) {
     new_matrix_df[i, i] <- old_matrix_df[i, i]
@@ -107,11 +47,11 @@ open_schools <- function(old_matrix_df, reduction_rate) {
   return(new_matrix_df)
 }
 
-india_default_matrix_df <- as.data.frame(india_default_matrix[[1]])
+india_default_matrix_df <- as.data.frame(india_params_list$contact_matrix_set[[1]])
 
-fifty_perc_df <- original_matrix_df * 0.5
-twenty_perc_df <- original_matrix_df * 0.2
-twenty_perc_schools_open_df <- open_schools(original_matrix_df, 0.2)
+fifty_perc_df <- india_default_matrix_df * 0.5
+twenty_perc_df <- india_default_matrix_df * 0.2
+twenty_perc_schools_open_df <- open_schools(india_default_matrix_df, 0.2)
 
 
 # Visualize contact matrix
@@ -195,7 +135,7 @@ out1 <- calibrate(
   forecast = 14,
   baseline_contact_matrix = data.matrix(india_default_matrix_df),
   contact_matrix_set = int_unique1$change,
-  date_contact_matrix_set_change = int_unique$dates_change,
+  date_contact_matrix_set_change = int_unique1$dates_change,
 )
 
 # With 20% contact under lockdown, and 50% after relaxing
