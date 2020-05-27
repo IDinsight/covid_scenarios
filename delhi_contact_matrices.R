@@ -3,13 +3,25 @@ library(tidyverse)
 library(readxl)
 
 '
-This file does the following:
-  - From NCAER lockdown data, find average no. of total contacts (no. of 
-    outside contacts + no. of inside contacts / no. of respondents) per 
-    age bin.
-  - Find average no. of total respondents per age bin in squire matrix 
+This file follows the following logic:
+
+  - From NCAER lockdown data, find average no. of outside contacts per 
+    age bin, as well as average no. of inside contacts.
+    
+  - Find average no. of total contacts per age bin in squire matrix 
     (2015 Haryana survey).
-  - For each age bin, record percent change between squire & NCAER.
+    
+  - For each age bin in squire matrix, subtract out avg no. of inside contacts
+    from NCAER. B/c avg no. of inside contacts is not likely to differ 
+    over time, we make simple assumption that:
+    
+        (squire total contacts per bin) 
+      - (NCAER inside contacts per bin) 
+      = (squire outside contact values).
+      
+  - Record percent change between squire outside contact numbers & NCAER 
+    outside contact numbers.
+    
   - Make new matrix, modifying bins in squire matrix by appropriate
     change factor.
 '
