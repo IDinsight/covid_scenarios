@@ -37,12 +37,6 @@ ncaer_outside <- as.data.frame(read_excel("data/DCVTS2_delhi_contacts.xlsx",
 ncaer_inside <- as.data.frame(read_excel("data/DCVTS2_delhi_contacts.xlsx", 
                               sheet = "Inside"))
 
-' #DELETE
-# Merge outside and inside datasets, first making unique id to merge on
-ncaer_outside$id <- paste(ncaer_outside$`Age of respondent`, ncaer_outside$`Contacts outside`)
-ncaer_inside$id  <- paste(ncaer_inside$`Age of respondent`, ncaer_inside$`Contacts inside`)
-ncaer <- merge(x = ncaer_outside, y = ncaer_inside, by = "id", all = FALSE) 
-'
 # Change all "<= 10" values to 12 -- arbitrarily assuming avg 10+ is 12
 ncaer_outside$`Contacts outside`[!ncaer_outside$`Contacts outside` %in% as.character(0:9)] <- 12
 ncaer_inside$`Contacts inside`[!ncaer_inside$`Contacts inside` %in% as.character(0:9)] <- 12
