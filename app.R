@@ -14,8 +14,6 @@ library(shiny)
 #-----------------------------------------------#
 # non-data inputs
 set.seed(212)
-today = "2020-05-27" # Change this so relevant visualisations
-# cut off at today's date
 
 # read in data
 pop_dist <- read.csv("./data/delhi_pop.csv")
@@ -43,23 +41,6 @@ df['X'] <- seq_len(nrow(df))
 hosp_bed <- 39455 * 0.8
 ICU_bed <- 1973 * 0.8
 
-#--------------------------#
-# read in contact matrices #
-#--------------------------#
-
-# Not using these for now; impossible to get fit
-# with just contact matrix manipulation alone.
-
-# Original squire matrix
-squire_matrix <- india_params_list$contact_matrix_set[[1]]
-
-# Phase 1 matrix (Mar 24 - May 03)
-phase1_matrix <- read.csv("./data/matrices/delhi/phase1_matrix.csv")
-
-# Phase 3 matrix (May 03 - May 31)
-phase3_matrix <- read.csv("./data/matrices/delhi/phase3_matrix.csv")
-
-
 # set up for parallelisation
 future::plan(future::multiprocess())
 
@@ -77,9 +58,9 @@ int_unique <- list(dates_change = c(phase1, phase3),
                    R0_change = c(0.2, 0.5)) 
 
 
-#-------#
-#R SHINY#
-#-------#
+#---------#
+# R SHINY #
+#---------#
 
 # Define the UI
 ui = fluidPage(
@@ -194,7 +175,7 @@ server = function(input, output) {
       scale_x_date(date_breaks = "1 week",              # x-tick every 2 weeks
                    date_labels = "%b %d",               # mark x-ticks w/ month, day
                    limits = as.Date(c("2020-03-07", 
-                                      today))) +        # cut off viz at today's date
+                                      Sys.Date()))) +        # cut off viz at today's date
       theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                        hjust = 1)) +    
       scale_y_continuous(labels = comma) +
