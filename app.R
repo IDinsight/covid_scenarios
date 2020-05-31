@@ -8,6 +8,9 @@ library(ggplot2)
 library(patchwork)
 library(scales)
 library(shiny)
+library(shinythemes)
+library(shinyalert)
+library(shinyBS)
 
 #-----------------------------------------------#
 # DO THINGS THAT DO NOT REQUIRE ANY SHINY INPUT #
@@ -82,53 +85,78 @@ int_unique <- list(dates_change = c(phase1, phase3),
 #-------#
 
 # Define the UI
-ui = fluidPage(
+ui = navbarPage("Delhi COVID-19 Simulator", theme = shinytheme("simplex"),
+               tabPanel("Overview",
+                        
+                        # Page title
+                        titlePanel(
+                          fluidRow(
+                              column(6, "Introduction", style='font-size:100%; font-weight: bold'), 
+                              column(3, img(height = 100, src = "delhi_govt.png")),
+                              column(3, img(height = 100, src = "idinsight.png"))
+                          )),
+                        
+                        mainPanel(
+                          fluidRow(
+                            column(4, ""),
+                            column(8, "Enter introduction here")
+                          )
+                        )),
+                         
+               
+               tabPanel("Simulator",
+                        
   titlePanel(
     fluidRow(
-      column(6, "Delhi COVID-19 Simulator", style='font-size:100%; font-weight: bold'), # Website title
+      column(6, "Simulations", style='font-size:100%; font-weight: bold'),
       column(3, img(height = 100, src = "delhi_govt.png")),
       column(3, img(height = 100, src = "idinsight.png"))
       )
   ),
-  sidebarPanel(
-    actionButton("run_model", "Run Model", style='padding:10px; font-size:100%; font-weight: bold'),
-    tags$hr(),
-    dateInput(label = "Date of ICU bed change:",
-                              inputId = "date_ICU_bed_capacity_change",
-                              format = "yyyy-mm-dd",
-                              value = NULL),
-                    numericInput(label = "Number of ICU beds after change:",
-                                 inputId = "ICU_bed_capacity",
-                                 min = 0,
-                                 step = 10,
-                                 value = as.integer(ICU_bed)),
-                    dateInput(label = "Date of hospital bed change:",
-                              inputId = "date_hosp_bed_capacity_change",
-                              format = "yyyy-mm-dd",
-                              value = NULL),
-                    numericInput(label = "Number of hospital beds after change:",
-                                 inputId = "hosp_bed_capacity",
-                                 min = 0,
-                                 step = 10,
-                                 value = as.integer(hosp_bed)),
-                    numericInput(label = "Reporting fraction:",
-                                 inputId = "reporting_fraction",
-                                 min = 0,
-                                 max = 1,
-                                 step = 0.01,
-                                 value = 0.8),
-                    tags$hr(),
-                    numericInput(label = "Replicates:",
-                                 inputId = "replicates",
-                                 min = 0,
-                                 step = 1,
-                                 value = 100),
-                    numericInput(label = "N particles:",
-                                 inputId = "n_particles",
-                                 min = 0,
-                                 step = 1,
-                                 value = 100),
-                    width = 4),
+  sidebarPanel("Model Parameters", style = 'font-size:100%; font-weight: bold',
+                          dateInput(label = "Date of ICU bed change:",
+                                    inputId = "date_ICU_bed_capacity_change",
+                                    format = "yyyy-mm-dd",
+                                    value = NULL),
+                         bsTooltip("date_ICU_bed_capacity_change", "Enter definition here",
+                                   placement = "right", trigger = "hover"),
+                          numericInput(label = "Number of ICU beds after change:",
+                                       inputId = "ICU_bed_capacity",
+                                       min = 0,
+                                       step = 10,
+                                       value = as.integer(ICU_bed)),
+                         bsTooltip("ICU_bed_capacity", "Enter definition here",
+                                   placement = "right", trigger = "hover"),
+                          dateInput(label = "Date of hospital bed change:",
+                                    inputId = "date_hosp_bed_capacity_change",
+                                    format = "yyyy-mm-dd",
+                                    value = NULL),
+                         bsTooltip("date_hosp_bed_capacity_change", "Enter definition here",
+                                   placement = "right", trigger = "hover"),
+                          numericInput(label = "Number of hospital beds after change:",
+                                       inputId = "hosp_bed_capacity",
+                                       min = 0,
+                                       step = 10,
+                                       value = as.integer(hosp_bed)),
+                         bsTooltip("hosp_bed_capacity", "Enter definition here",
+                                   placement = "right", trigger = "hover"),
+                          numericInput(label = "Reporting fraction:",
+                                       inputId = "reporting_fraction",
+                                       min = 0,
+                                       max = 1,
+                                       step = 0.01,
+                                       value = 0.8),
+                         bsTooltip("reporting_fraction", "Enter definition here",
+                                   placement = "right", trigger = "hover"),
+                          tags$hr(),
+          actionButton("run_test_model", "Run test", style ='padding:10px; font-size:100%; font-weight: bold'),
+          bsTooltip("run_test_model", "Enter definition here",
+                    placement = "right", trigger = "hover"),
+          tags$hr(),
+          actionButton("run_model", "Run", style='padding:10px; font-size:100%; font-weight: bold'),
+          bsTooltip("run_model", "Enter definition here",
+                    placement = "right", trigger = "hover"),
+                          width = 4),
   mainPanel(
     fluidRow(
       plotOutput(outputId = "plot1"),
@@ -137,14 +165,15 @@ ui = fluidPage(
       )
     )
 )
+)
 
 
 
 # Define the server (all calculations will take place here)
 server = function(input, output) {   
   
-  # Re-run the model when the button is pressed 
-  model_output <- eventReactive(input$run_model, {
+    # Re-run the model when the button is pressed 
+    model_output <-eventReactive(input$run_model, {
     # Create a Progress object
     showModal(modalDialog("Running model. This will likely take a few minutes.", footer = NULL))
     
@@ -162,8 +191,8 @@ server = function(input, output) {
       last_start_date = "2020-03-12",
       day_step = 1,
       
-      replicates = input$replicates,  # Make sure this is 100 if final
-      n_particles = input$n_particles, # Make sure this is 100 if final
+      replicates = 100,  # Make sure this is 100 if final
+      n_particles = 100, # Make sure this is 100 if final
       
       population = pop_vector,
       forecast = 14, # 70 
@@ -176,6 +205,48 @@ server = function(input, output) {
       hosp_bed_capacity = input$hosp_bed_capacity,
       date_hosp_bed_capacity_change = input$date_hosp_bed_capacity_change,
 
+      baseline_ICU_bed_capacity = ICU_bed,
+      ICU_bed_capacity = input$ICU_bed_capacity,
+      date_ICU_bed_capacity_change = input$date_ICU_bed_capacity_change,
+    )
+    
+    removeModal()
+    
+    return(model)
+  })
+  
+  model_output <- eventReactive(input$run_test_model, {
+    # Create a Progress object
+    showModal(modalDialog("Running model. This will likely take a few minutes.", footer = NULL))
+    
+    # Basic model; India generic contact matrix
+    model <- calibrate(
+      reporting_fraction = input$reporting_fraction,
+      
+      data = df,
+      
+      R0_min = 2,
+      R0_max = 7,
+      R0_step = 0.5,
+      
+      first_start_date = "2020-03-02",
+      last_start_date = "2020-03-12",
+      day_step = 1,
+      
+      replicates = 10,  # Make sure this is 100 if final
+      n_particles = 10, # Make sure this is 100 if final
+      
+      population = pop_vector,
+      forecast = 14, # 70 
+      baseline_contact_matrix = squire_matrix,
+      
+      date_R0_change = int_unique$dates_change,
+      R0_change = int_unique$R0_change,
+      
+      baseline_hosp_bed_capacity = hosp_bed, 
+      hosp_bed_capacity = input$hosp_bed_capacity,
+      date_hosp_bed_capacity_change = input$date_hosp_bed_capacity_change,
+      
       baseline_ICU_bed_capacity = ICU_bed,
       ICU_bed_capacity = input$ICU_bed_capacity,
       date_ICU_bed_capacity_change = input$date_ICU_bed_capacity_change,
