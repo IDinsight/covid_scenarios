@@ -63,11 +63,7 @@ future::plan(future::multiprocess())
 phase1 <- "2020-03-24"
 phase3 <- "2020-05-03"
 
-# FIRST MODEL: 
-  # Mar 23 to May 03 with 0.2 R0;
-  # May 03 onwards with 0.4 R0;
-  # death reporting_fraction = 1.0
-
+# FIRST MODEL
 
 int_unique <- list(dates_change = c(phase1, phase3), 
                    R0_change = c(0.2, 0.5)) 
@@ -82,10 +78,10 @@ out <- calibrate(
   first_start_date = "2020-03-02",
   last_start_date = "2020-03-12",
   day_step = 1,
-  replicates = 30,  # Make sure this is 100 if final
-  n_particles = 30, # Make sure this is 100 if final
+  replicates = 10,  # Make sure this is 100 if final
+  n_particles = 10, # Make sure this is 100 if final
   population = pop_vector,
-  forecast = 14, # 70 
+  forecast = 14,
   baseline_contact_matrix = squire_matrix,
   date_R0_change = int_unique$dates_change,
   R0_change = int_unique$R0_change,
@@ -157,7 +153,12 @@ plotting_dates <- data.frame(date = as.Date(c(phase1, phase3)),
                              event = c("Lockdown 1.0", "Lockdown 3.0")
 )
 
-today <- data.frame(date = Sys.Date(), event = "Today")
+forecast <- 0
+
+ifelse (forecast > 0,
+        today <- data.frame(date = Sys.Date(), event = "Today"),
+        today <- data.frame(date = as.Date(NA), event = NA)
+)
 
 # Plot death estimates with particle fit up until today
 model_fit <- plot(out, "deaths", particle_fit = TRUE) +          
@@ -166,81 +167,86 @@ model_fit <- plot(out, "deaths", particle_fit = TRUE) +
                   scale_x_date(date_breaks = "1 week",              # x-tick every 2 weeks
                                date_labels = "%b %d",               # mark x-ticks w/ month, day
                                limits = as.Date(c("2020-03-07", 
-                                                  Sys.Date()))) +        # cut off viz at today's date
+                                                  Sys.Date()))) +   # cut off viz at today's date
                   theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                                    hjust = 1)) +    
                   scale_y_continuous() +
-                  ylim(c(0, 30))                                   # change vertical limits
+                  ylim(c(0, max(out$scan_results$inputs$data$deaths) + 15))  # change vertical limits
 
 # Save viz
 ggsave("visualisations/model_fit.png")
 
 # Plot projected death counts
-d_forecast <- plot(out, "deaths", date_0 = max(df$date), 
-                   x_var = "date") +        
-                   labs(title = "Projected daily death counts",
-                       subtitle = "Projecting forward from 27 May") +
-                   ylab("Deaths") +
-                   xlab("Date") +
-                   scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
-                               date_labels = "%b %d",               # mark x-ticks w/ month, day
-                               date_minor_breaks = "1 week") +      # unmarked grid lines for each week 
-                   theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
-                                                   hjust = 1)) +    
-                   scale_y_continuous(labels = comma) +
-                   theme(legend.position = "none")                   # suppress legend
+plot(out, "deaths", date_0 = max(df$date), 
+     x_var = "date") +        
+     labs(title = "Projected daily death counts",
+         subtitle = "Projecting forward from 27 May") +
+     ylab("Deaths") +
+     xlab("Date") +
+     scale_x_date(date_breaks = "2 week",             # x-tick every 2 weeks
+                 date_labels = "%b %d",               # mark x-ticks w/ month, day
+                 date_minor_breaks = "1 week") +      # unmarked grid lines for each week 
+     theme(axis.text.x = element_text(angle = 45,     # x-axis on 45 deg angle
+                                     hjust = 1)) +    
+     scale_y_continuous(labels = comma) +
+     geom_vline(xintercept = today$date,              # Plot today's date line
+                linetype = 3,
+                color = 'darkgray') +
+     geom_text(data = today,                          # Annotate today line
+               mapping = aes(x = date, y = 1000, label = event), 
+               size = 3, angle = 90, vjust = -0.5, hjust = 0, 
+               color = 'darkmagenta', alpha = 0.5,
+               fontface = 'italic') +
+     theme(legend.position = "none")                   # suppress legend
 
-if(thing) {
- d_forecast + geom_vline(data = today, 
-                         mapping = aes(date),
-                         linetype = 3)
-}
 
-# geom_segment(data = plotting_dates,
-#              mapping = aes(x = date, xend = date,
-#                            y = 0, yend = hosp_bed),
-#              color = 'darkgrey',
-#              alpha = 0.8,
-#              size = 1) 
-                  
 # Save viz
 ggsave("visualisations/projected_deaths.png")
 
 # Plot projected hospital bed usage
-hosp_forecast <- plot(out, var_select = c("hospital_occupancy"), 
-                          date_0 = max(df$date), x_var = "date") +
-                      labs(title = "Projection for hospital bed occupancy",
-                           subtitle = "Projecting forward from 27 May") +
-                      ylab("No. of beds") +
-                      xlab("Date") +
-                      geom_hline(yintercept = hosp_bed , linetype = 4) + # show bed capacity line
-                      annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                               y = hosp_bed + 1800, 
-                               label = "80% bed capacity", size = 3, 
-                               fontface = 'italic', hjust = 0) +
-                      geom_segment(data = plotting_dates,
-                                    mapping = aes(x = date, xend = date,
-                                                  y = 0, yend = hosp_bed),
-                                    color = 'darkgrey',
-                                    alpha = 0.8,
-                                    size = 1) +
-                      geom_text(data = plotting_dates, 
-                                mapping = aes(x = date, y = 1000, label = event), 
-                                size = 3, angle = 90, vjust = -0.5, hjust = 0, 
-                                color = 'darkgrey', alpha = 0.8, 
-                                fontface = 'bold') +
-                      scale_x_date(date_breaks = "1 week",              # x-tick every 2 weeks
-                                   date_labels = "%b %d",               # mark x-ticks w/ month, day
-                                   date_minor_breaks = "1 week",        # unmarked grid lines for each week
-                                   #limits = as.Date(c("2020-03-07", 
-                                   #                   "2020-06-01"))
-                                   ) +
-                      theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
-                                                       hjust = 1)) +
-                      #ylim(0, hosp_bed + 4000) +
-                      scale_y_continuous(n.breaks = 8, 
-                                         limits = c(0, hosp_bed + 4000)) + 
-                      theme(legend.position = "none")                   # suppress legend
+plot(out, var_select = c("hospital_occupancy"), 
+          date_0 = max(df$date), x_var = "date") +
+      labs(title = "Projection for hospital bed occupancy",
+           subtitle = "Projecting forward from 27 May") +
+      ylab("No. of beds") +
+      xlab("Date") +
+      geom_hline(yintercept = hosp_bed , linetype = 4) + # show bed capacity line
+      annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+               y = hosp_bed + 1800, 
+               label = "80% bed capacity", size = 3, 
+               fontface = 'italic', hjust = 0) +
+      geom_segment(data = plotting_dates,
+                    mapping = aes(x = date, xend = date,
+                                  y = 0, yend = hosp_bed),
+                    color = 'darkgrey',
+                    alpha = 0.6,
+                    size = 1) +
+      geom_text(data = plotting_dates, 
+                mapping = aes(x = date, y = hosp_bed * 0.8, 
+                              label = event), 
+                size = 3, angle = 90, vjust = -0.5, hjust = .8, 
+                color = 'darkgrey', alpha = 0.7, 
+                fontface = 'bold') +
+      geom_segment(data = today,
+                   mapping = aes(x = date, xend = date,
+                                 y = 0, yend = hosp_bed),
+                   color = 'darkmagenta',
+                   alpha = 0.5,
+                   size = 1) +
+      geom_text(data = today,                          # Annotate today line
+                mapping = aes(x = date, y = 1000, label = event), 
+                size = 3, angle = 90, vjust = -0.5, hjust = 0, 
+                color = 'darkmagenta', alpha = 0.5,
+                fontface = 'italic') +
+      scale_x_date(date_breaks = "1 week",              # x-tick every 2 weeks
+                   date_labels = "%b %d",               # mark x-ticks w/ month, day
+                   date_minor_breaks = "1 week",        # unmarked grid lines for each week
+                   ) +
+      theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
+                                       hjust = 1)) +
+      scale_y_continuous(n.breaks = 8, 
+                         limits = c(0, hosp_bed + 4000)) + 
+      theme(legend.position = "none")                   # suppress legend
 
 # Save viz
 ggsave("visualisations/projected_hosp_occ.png")
@@ -268,6 +274,17 @@ icu_forecast <- plot(out, var_select = c("ICU_occupancy"),
                               size = 3, angle = 90, vjust = -0.5, hjust = 0, 
                               color = 'darkgrey', alpha = 0.8, 
                               fontface = 'bold') +
+                    geom_segment(data = today,
+                                 mapping = aes(x = date, xend = date,
+                                               y = 0, yend = hosp_bed),
+                                 color = 'darkmagenta',
+                                 alpha = 0.5,
+                                 size = 1) +
+                    geom_text(data = today,                          # Annotate today line
+                              mapping = aes(x = date, y = 1000, label = event), 
+                              size = 3, angle = 90, vjust = -0.5, hjust = 0, 
+                              color = 'darkmagenta', alpha = 0.5,
+                              fontface = 'italic') +
                     scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
                              date_labels = "%b %d",                   # mark x-ticks w/ month, day
                              date_minor_breaks = "1 week",            # unmarked grid lines for each week

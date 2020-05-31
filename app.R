@@ -75,41 +75,48 @@ ui = fluidPage(
     actionButton("run_model", "Run Model", style='padding:10px; font-size:100%; font-weight: bold'),
     tags$hr(),
     dateInput(label = "Date of ICU bed change:",
-                              inputId = "date_ICU_bed_capacity_change",
-                              format = "yyyy-mm-dd",
-                              value = NULL),
-                    numericInput(label = "Number of ICU beds after change:",
-                                 inputId = "ICU_bed_capacity",
-                                 min = 0,
-                                 step = 10,
-                                 value = as.integer(ICU_bed)),
-                    dateInput(label = "Date of hospital bed change:",
-                              inputId = "date_hosp_bed_capacity_change",
-                              format = "yyyy-mm-dd",
-                              value = NULL),
-                    numericInput(label = "Number of hospital beds after change:",
-                                 inputId = "hosp_bed_capacity",
-                                 min = 0,
-                                 step = 10,
-                                 value = as.integer(hosp_bed)),
-                    numericInput(label = "Reporting fraction:",
-                                 inputId = "reporting_fraction",
-                                 min = 0,
-                                 max = 1,
-                                 step = 0.01,
-                                 value = 0.8),
-                    tags$hr(),
-                    numericInput(label = "Replicates:",
-                                 inputId = "replicates",
-                                 min = 0,
-                                 step = 1,
-                                 value = 100),
-                    numericInput(label = "N particles:",
-                                 inputId = "n_particles",
-                                 min = 0,
-                                 step = 1,
-                                 value = 100),
-                    width = 4),
+              inputId = "date_ICU_bed_capacity_change",
+              format = "yyyy-mm-dd",
+              value = NULL),
+    numericInput(label = "Number of ICU beds after change:",
+                 inputId = "ICU_bed_capacity",
+                 min = 0,
+                 step = 10,
+                 value = NULL),
+    dateInput(label = "Date of hospital bed change:",
+              inputId = "date_hosp_bed_capacity_change",
+              format = "yyyy-mm-dd",
+              value = NULL),
+    numericInput(label = "Number of hospital beds after change:",
+                 inputId = "hosp_bed_capacity",
+                 min = 0,
+                 step = 10,
+                 value = NULL),
+    numericInput(label = "Reporting fraction:",
+                 inputId = "reporting_fraction",
+                 min = 0,
+                 max = 1,
+                 step = 0.01,
+                 value = 0.8),
+    numericInput(label = "Number of days to forecast:",
+                 inputId = "forecast",
+                 min = 0,
+                 max = 14,
+                 step = 1,
+                 value = 0),
+    tags$hr(),
+    numericInput(label = "Number of replicates:",
+                 inputId = "replicates",
+                 min = 0,
+                 step = 1,
+                 value = 30),
+    numericInput(label = "Number of particles:",
+                 inputId = "n_particles",
+                 min = 0,
+                 step = 1,
+                 value = 30),
+    width = 4),
+  
   mainPanel(
     fluidRow(
       plotOutput(outputId = "plot1"),
@@ -127,7 +134,7 @@ server = function(input, output) {
   # Re-run the model when the button is pressed 
   model_output <- eventReactive(input$run_model, {
     # Create a Progress object
-    showModal(modalDialog("Running model. This will likely take a few minutes.", footer = NULL))
+    showModal(modalDialog("Running model. This may take a few minutes.", footer = NULL))
     
     # Basic model; India generic contact matrix
     model <- calibrate(
@@ -147,7 +154,7 @@ server = function(input, output) {
       n_particles = input$n_particles, # Make sure this is 100 if final
       
       population = pop_vector,
-      forecast = 14, # 70 
+      forecast = input$forecast, 
       baseline_contact_matrix = squire_matrix,
       
       date_R0_change = int_unique$dates_change,
@@ -167,34 +174,41 @@ server = function(input, output) {
     return(model)
   })
   
+  # Set up dates to annotate plots
+  
+  plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
+                               event=c("Lockdown 1.0", "Lockdown 3.0"))
+  
+  ifelse (input$forecast > 0, # If forecast == 0, no annotation
+          today <- data.frame(date = Sys.Date(), event = "Today"),
+          today <- data.frame(date = as.Date(NA), event = NA)
+  )
+
   # Plot outputs
+  
   output$plot1 <- renderPlot({
     plot(model_output(), "deaths", particle_fit = TRUE) +          
-      labs(title = "Model fit to daily death counts to date",
-           subtitle = "Latest data from 27 May") + 
+      labs(title = "Model fit to daily death counts to-date") + 
       scale_x_date(date_breaks = "1 week",              # x-tick every 2 weeks
                    date_labels = "%b %d",               # mark x-ticks w/ month, day
                    limits = as.Date(c("2020-03-07", 
-                                      Sys.Date()))) +        # cut off viz at today's date
+                                      Sys.Date()))) +   # cut off viz at today's date
       theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                        hjust = 1)) +    
       scale_y_continuous(labels = comma) +
-      ylim(c(0, 100))                                   # change vertical limits
-    
+      ylim(c(0, max(out$scan_results$inputs$data$deaths) + # change vertical limits proportionally
+                max(out$scan_results$inputs$data$deaths) * 0.15))   
   })
   
-  # Plot with particle fit
+  # Plot hospital bed projections
   output$plot2 <- renderPlot({
-    plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
-                                 event=c("Lockdown 1.0", "Lockdown 3.0"))
     
     plot(model_output(), var_select = c("hospital_occupancy"), 
          date_0 = max(df$date), x_var = "date") +
-      labs(title = "Projection for hospital bed occupancy",
-           subtitle = "Projecting forward from 27 May") +
+      labs(title = "Projection for hospital bed occupancy") +
       ylab("No. of beds") +
       xlab("Date") +
-      geom_hline(yintercept = hosp_bed , linetype = 4) + # show bed capacity line
+      geom_hline(yintercept = hosp_bed, linetype = 4) +  # show bed capacity line
       annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
                y = hosp_bed + 1800, 
                label = "80% bed capacity", size = 3, 
@@ -212,28 +226,24 @@ server = function(input, output) {
                 fontface = 'bold') +
       scale_x_date(date_breaks = "1 week",              # x-tick every 2 weeks
                    date_labels = "%b %d",               # mark x-ticks w/ month, day
-                   date_minor_breaks = "1 week",        # unmarked grid lines for each week
-                   #limits = as.Date(c("2020-03-07", 
-                   #                   "2020-06-01"))
+                   date_minor_breaks = "1 week"         # unmarked grid lines for each week
       ) +
       theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                        hjust = 1)) +
-      #ylim(0, hosp_bed + 4000) +
       scale_y_continuous(n.breaks = 8, 
                          limits = c(0, hosp_bed + 4000)) + 
       theme(legend.position = "none")                   # suppress legend
     
   })  
   
-  # Plot Delhi infections
+  # Plot ICU bed projections
   output$plot3 <- renderPlot({
     plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
                                  event=c("Lockdown 1.0", "Lockdown 3.0"))
     
     plot(model_output(), var_select = c("ICU_occupancy"), 
          date_0 = max(df$date), x_var = "date") +
-      labs(title = "Projection for ICU bed occupancy",
-           subtitle = "Projecting forward from 27 May") +
+      labs(title = "Projection for ICU bed occupancy") +
       ylab("No. of beds") +
       xlab("Date") +
       geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
@@ -258,8 +268,8 @@ server = function(input, output) {
       ) +
       theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                        hjust = 1)) +
-      ylim(0, 1000) +
-      scale_y_continuous(n.breaks = 8) + 
+      scale_y_continuous(n.breaks = 8, 
+                         limits = c(0, 1000)) + 
       theme(legend.position = "none")                   # suppress legend
     
   })
