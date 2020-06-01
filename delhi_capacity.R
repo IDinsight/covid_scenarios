@@ -81,12 +81,14 @@ out <- calibrate(
   replicates = 10,  # Make sure this is 100 if final
   n_particles = 10, # Make sure this is 100 if final
   population = pop_vector,
-  forecast = 14,
+  forecast = 0,
   baseline_contact_matrix = squire_matrix,
   date_R0_change = int_unique$dates_change,
   R0_change = int_unique$R0_change,
   baseline_hosp_bed_capacity = hosp_bed, 
-  baseline_ICU_bed_capacity = ICU_bed
+  baseline_ICU_bed_capacity = ICU_bed,
+  ICU_bed_capacity = 1600,
+  date_ICU_bed_capacity_change = "2020-05-03"
 )
 
 # Same model, but projecting only 2 weeks
@@ -277,7 +279,7 @@ plot(out, var_select = c("ICU_occupancy"),
                                  mapping = aes(x = date, xend = date,
                                                y = 0, yend = ICU_bed),
                                  color = 'darkmagenta',
-                                 alpha = 0.5,
+                                 alpha = 0.3,
                                  size = 1) +
                     geom_text(data = today,                          # Annotate today line
                               mapping = aes(x = date, 
@@ -299,3 +301,70 @@ plot(out, var_select = c("ICU_occupancy"),
 
 # Save viz
 ggsave("visualisations/projected_ICU_occ.png")
+
+############################## PROJECTION PLOTTING
+##################################################
+
+input.hosp_bed_capacity_change <- 1.3
+input.ICU_bed_capacity_change <- 1.3
+
+hosp_bed_capacity_change <- c(1, input.hosp_bed_capacity_change)
+ICU_bed_capacity_change <- c(1, input.ICU_bed_capacity_change)
+
+p <- projections(r = c(out), 
+                 time_period = 14,
+                 hosp_bed_capacity_change = hosp_bed_capacity_change, 
+                 tt_hosp_beds = c(0, 14),
+                 ICU_bed_capacity_change = hosp_bed_capacity_change, 
+                 tt_ICU_beds = c(0, 14),
+                 )
+
+projection_plotting(
+      r_list = list(p),
+      var_select = c("hospital_occupancy"),
+      scenarios = c("With bed change"),
+      add_parms_to_scenarios = FALSE,
+      ci = TRUE,
+      date_0 = max(df$date), 
+      x_var = "date") +
+  labs(title = "Projection for hospital bed occupancy") +
+  ylab("No. of beds") +
+  xlab("Date") +
+  geom_hline(yintercept = hosp_bed , linetype = 4) + # show bed capacity line
+  annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+           y = hosp_bed * 1.05, 
+           label = "80% bed capacity", size = 3, 
+           fontface = 'italic', hjust = 0) +
+  geom_segment(data = plotting_dates,                # Add lockdown lines
+               mapping = aes(x = date, xend = date,
+                             y = 0, yend = hosp_bed),
+               color = 'darkgrey',
+               alpha = 0.7,
+               size = 1) +
+  geom_text(data = plotting_dates,                   # Annotate lockdown lines
+            mapping = aes(x = date, 
+                          y = hosp_bed * 0.9, 
+                          label = event), 
+            size = 3, angle = 90, vjust = -0.5, hjust = .9, 
+            color = 'darkgrey', alpha = 0.7, 
+            fontface = 'bold') +
+  geom_segment(data = today,                      # Plot "today" line
+               mapping = aes(x = date, xend = date,
+                             y = 0, yend = hosp_bed),
+               color = 'darkmagenta',
+               alpha = 0.3,
+               size = 1) +
+  geom_text(data = today,                          # Annotate "today" line
+            mapping = aes(x = date, y = hosp_bed * 0.9, label = event), 
+            size = 3, angle = 90, vjust = -0.5, hjust = .9, 
+            color = 'darkmagenta', alpha = 0.5,
+            fontface = 'italic') +
+  scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
+               date_labels = "%b %d",               # mark x-ticks w/ month, day
+               date_minor_breaks = "1 week",        # unmarked grid lines for each week
+  ) +
+  theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
+                                   hjust = 1)) +
+  scale_y_continuous(n.breaks = 8, 
+                     limits = c(0, hosp_bed * 1.1)) + 
+  theme(legend.position = "none")                   # suppress legend
