@@ -39,6 +39,9 @@ names(state_data) <- c("date", "cases", "recovered", "deaths")
 df <- state_data[c("date", "deaths", "cases")]
 df['X'] <- seq_len(nrow(df))
 
+# Original squire matrix
+squire_matrix <- india_params_list$contact_matrix_set[[1]]
+
 # Hospital and ICU bed capacities; using 80% of total
 # https://cddep.org/wp-content/uploads/2020/04/State-wise-estimates-of-current-beds-and-ventilators_24Apr2020.pdf
 hosp_bed <- 39455 * 0.8
