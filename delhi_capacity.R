@@ -153,7 +153,7 @@ plotting_dates <- data.frame(date = as.Date(c(phase1, phase3)),
                              event = c("Lockdown 1.0", "Lockdown 3.0")
 )
 
-forecast <- 0
+forecast <- 5
 
 ifelse (forecast > 0,
         today <- data.frame(date = Sys.Date(), event = "Today"),
@@ -162,8 +162,7 @@ ifelse (forecast > 0,
 
 # Plot death estimates with particle fit up until today
 model_fit <- plot(out, "deaths", particle_fit = TRUE) +          
-                  labs(title = "Model fit to daily death counts to date",
-                       subtitle = "Latest data from 27 May") + 
+                  labs(title = "Model fit to daily death counts to date") + 
                   scale_x_date(date_breaks = "1 week",              # x-tick every 2 weeks
                                date_labels = "%b %d",               # mark x-ticks w/ month, day
                                limits = as.Date(c("2020-03-07", 
@@ -179,8 +178,7 @@ ggsave("visualisations/model_fit.png")
 # Plot projected death counts
 plot(out, "deaths", date_0 = max(df$date), 
      x_var = "date") +        
-     labs(title = "Projected daily death counts",
-         subtitle = "Projecting forward from 27 May") +
+     labs(title = "Projected daily death counts") +
      ylab("Deaths") +
      xlab("Date") +
      scale_x_date(date_breaks = "2 week",             # x-tick every 2 weeks
@@ -206,82 +204,85 @@ ggsave("visualisations/projected_deaths.png")
 # Plot projected hospital bed usage
 plot(out, var_select = c("hospital_occupancy"), 
           date_0 = max(df$date), x_var = "date") +
-      labs(title = "Projection for hospital bed occupancy",
-           subtitle = "Projecting forward from 27 May") +
+      labs(title = "Projection for hospital bed occupancy") +
       ylab("No. of beds") +
       xlab("Date") +
       geom_hline(yintercept = hosp_bed , linetype = 4) + # show bed capacity line
       annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-               y = hosp_bed + 1800, 
+               y = hosp_bed * 1.05, 
                label = "80% bed capacity", size = 3, 
                fontface = 'italic', hjust = 0) +
-      geom_segment(data = plotting_dates,
+      geom_segment(data = plotting_dates,                # Add lockdown lines
                     mapping = aes(x = date, xend = date,
                                   y = 0, yend = hosp_bed),
                     color = 'darkgrey',
-                    alpha = 0.6,
+                    alpha = 0.7,
                     size = 1) +
-      geom_text(data = plotting_dates, 
-                mapping = aes(x = date, y = hosp_bed * 0.8, 
+      geom_text(data = plotting_dates,                   # Annotate lockdown lines
+                mapping = aes(x = date, 
+                              y = hosp_bed * 0.9, 
                               label = event), 
-                size = 3, angle = 90, vjust = -0.5, hjust = .8, 
+                size = 3, angle = 90, vjust = -0.5, hjust = .9, 
                 color = 'darkgrey', alpha = 0.7, 
                 fontface = 'bold') +
-      geom_segment(data = today,
+      geom_segment(data = today,                      # Plot "today" line
                    mapping = aes(x = date, xend = date,
                                  y = 0, yend = hosp_bed),
                    color = 'darkmagenta',
                    alpha = 0.5,
                    size = 1) +
-      geom_text(data = today,                          # Annotate today line
-                mapping = aes(x = date, y = 1000, label = event), 
+      geom_text(data = today,                          # Annotate "today" line
+                mapping = aes(x = date, y = 0, label = event), 
                 size = 3, angle = 90, vjust = -0.5, hjust = 0, 
                 color = 'darkmagenta', alpha = 0.5,
                 fontface = 'italic') +
-      scale_x_date(date_breaks = "1 week",              # x-tick every 2 weeks
+      scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
                    date_labels = "%b %d",               # mark x-ticks w/ month, day
                    date_minor_breaks = "1 week",        # unmarked grid lines for each week
                    ) +
       theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                        hjust = 1)) +
       scale_y_continuous(n.breaks = 8, 
-                         limits = c(0, hosp_bed + 4000)) + 
+                         limits = c(0, hosp_bed * 1.1)) + 
       theme(legend.position = "none")                   # suppress legend
 
 # Save viz
 ggsave("visualisations/projected_hosp_occ.png")
 
 # Plot projected ICU bed usage
-icu_forecast <- plot(out, var_select = c("ICU_occupancy"), 
+plot(out, var_select = c("ICU_occupancy"), 
                     date_0 = max(df$date), x_var = "date") +
-                    labs(title = "Projection for ICU bed occupancy",
-                         subtitle = "Projecting forward from 27 May") +
+                    labs(title = "Projection for ICU bed occupancy") +
                     ylab("No. of beds") +
                     xlab("Date") +
                     geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
                     annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                         y = ICU_bed + 100, 
+                         y = ICU_bed * 1.05, 
                          label = "80% bed capacity", size = 3, 
                          fontface = 'italic', hjust = 0) +
-                    geom_segment(data = plotting_dates,
+                    geom_segment(data = plotting_dates,                # Add lockdown lines
                              mapping = aes(x = date, xend = date,
                                            y = 0, yend = ICU_bed),
                              color = 'darkgrey',
                              alpha = 0.8,
                              size = 1) +
-                    geom_text(data = plotting_dates, 
-                              mapping = aes(x = date, y = 100, label = event), 
-                              size = 3, angle = 90, vjust = -0.5, hjust = 0, 
+                    geom_text(data = plotting_dates,                   # Annotate lockdown lines
+                              mapping = aes(x = date, 
+                                            y = ICU_bed * 0.9, 
+                                            label = event), 
+                              size = 3, angle = 90, vjust = -0.5, hjust = 0.9, 
                               color = 'darkgrey', alpha = 0.8, 
                               fontface = 'bold') +
                     geom_segment(data = today,
                                  mapping = aes(x = date, xend = date,
-                                               y = 0, yend = hosp_bed),
+                                               y = 0, yend = ICU_bed),
                                  color = 'darkmagenta',
                                  alpha = 0.5,
                                  size = 1) +
                     geom_text(data = today,                          # Annotate today line
-                              mapping = aes(x = date, y = 1000, label = event), 
+                              mapping = aes(x = date, 
+                                            y = 0, 
+                                            label = event), 
                               size = 3, angle = 90, vjust = -0.5, hjust = 0, 
                               color = 'darkmagenta', alpha = 0.5,
                               fontface = 'italic') +
@@ -291,8 +292,8 @@ icu_forecast <- plot(out, var_select = c("ICU_occupancy"),
                     ) +
                     theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                                  hjust = 1)) +
-                    ylim(0, 1000) +
-                    scale_y_continuous(n.breaks = 8) + 
+                    scale_y_continuous(n.breaks = 8,
+                                       limits = c(0, ICU_bed * 1.1)) + 
                     theme(legend.position = "none")                   # suppress legend
 
 

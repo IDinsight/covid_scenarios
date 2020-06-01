@@ -286,9 +286,9 @@ server = function(input, output) {
          labs(title = "Projection for hospital bed occupancy") +
          ylab("No. of beds") +
          xlab("Date") +
-         geom_hline(yintercept = hosp_bed , linetype = 4) + # show bed capacity line
+         geom_hline(yintercept = hosp_bed, linetype = 4) +  # show bed capacity line
          annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                   y = hosp_bed + 1800, 
+                   y = hosp_bed * 1.05, 
                    label = "80% bed capacity", size = 3, 
                    fontface = 'italic', hjust = 0) +
          geom_segment(data = plotting_dates,                # Add lockdown lines
@@ -342,11 +342,12 @@ server = function(input, output) {
     
     plot(model_output(), var_select = c("ICU_occupancy"), 
          date_0 = max(df$date), x_var = "date") +
+         labs(title = "Projection for hospital bed occupancy") +
          ylab("No. of beds") +
          xlab("Date") +
          geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
          annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                  y = ICU_bed + 100, 
+                  y = ICU_bed * 1.05, 
                   label = "80% bed capacity", size = 3, 
                   fontface = 'italic', hjust = 0) +
          geom_segment(data = plotting_dates,                # Add lockdown lines
