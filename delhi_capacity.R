@@ -87,8 +87,6 @@ out <- calibrate(
   R0_change = int_unique$R0_change,
   baseline_hosp_bed_capacity = hosp_bed, 
   baseline_ICU_bed_capacity = ICU_bed,
-  ICU_bed_capacity = 1600,
-  date_ICU_bed_capacity_change = "2020-05-03"
 )
 
 # Same model, but projecting only 2 weeks
@@ -155,7 +153,7 @@ plotting_dates <- data.frame(date = as.Date(c(phase1, phase3)),
                              event = c("Lockdown 1.0", "Lockdown 3.0")
 )
 
-forecast <- 5
+forecast <- 14
 
 ifelse (forecast > 0,
         today <- data.frame(date = Sys.Date(), event = "Today"),
@@ -311,18 +309,18 @@ input.ICU_bed_capacity_change <- 1.3
 hosp_bed_capacity_change <- c(1, input.hosp_bed_capacity_change)
 ICU_bed_capacity_change <- c(1, input.ICU_bed_capacity_change)
 
-p <- projections(r = c(out), 
+p <- projections(r = out, 
                  time_period = 14,
-                 hosp_bed_capacity_change = hosp_bed_capacity_change, 
-                 tt_hosp_beds = c(0, 14),
-                 ICU_bed_capacity_change = hosp_bed_capacity_change, 
-                 tt_ICU_beds = c(0, 14),
+                 hosp_bed_capacity_change = 1, 
+                 tt_hosp_beds = 0,
+                 ICU_bed_capacity_change = 1, 
+                 tt_ICU_beds = 0,
                  )
 
 projection_plotting(
       r_list = list(p),
       var_select = c("hospital_occupancy"),
-      scenarios = c("With bed change"),
+      scenarios = c(""),
       add_parms_to_scenarios = FALSE,
       ci = TRUE,
       date_0 = max(df$date), 
@@ -368,3 +366,4 @@ projection_plotting(
   scale_y_continuous(n.breaks = 8, 
                      limits = c(0, hosp_bed * 1.1)) + 
   theme(legend.position = "none")                   # suppress legend
+

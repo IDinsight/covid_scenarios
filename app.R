@@ -107,39 +107,33 @@ ui = navbarPage("Delhi COVID-19 Simulator", theme = shinytheme("simplex"),
   
   # Solicit user input
   sidebarPanel("Model Parameters", style = 'font-size:100%; font-weight: bold',
-                  # dateInput(label = "Date of ICU bed change:",
-                  #          inputId = "date_ICU_bed_capacity_change",
-                  #          format = "yyyy-mm-dd",
-                  #          value = as.Date(NA)),
-                  # bsTooltip("date_ICU_bed_capacity_change", "Date on which ICU bed capacity changed or is anticipated to change",
-                  #          placement = "right", trigger = "hover"),
                   numericInput(label = "Days until ICU bed change (if applicable):",
                                inputId = "tt_ICU_beds",
                                min = 0,
                                step = 1,
-                               value = NULL),
-                  bsTooltip("tt_ICU_beds", "Days until ICU bed capacity is anticipated to change (e.g. 7, 21).",
+                               value = 0.0),
+                  bsTooltip("tt_ICU_beds", "Days until ICU bed capacity is anticipated to change (e.g. 7, 21). If no anticipated change, leave at 0.",
                             placement = "right", trigger = "hover"),
-                  numericInput(label = "Percent increase/decrease in ICU beds after change (if applicable):",
+                  numericInput(label = "Ratio increase/decrease in ICU beds after change (if applicable):",
                                inputId = "ICU_bed_capacity_change",
                                min = 0,
                                step = 0.01,
-                               value = NULL), 
-                  bsTooltip("ICU_bed_capacity_change", "If beds to increase by 10%, enter 1.1; if beds to decrease by 40%, enter 0.6.",
+                               value = 1.0), 
+                  bsTooltip("ICU_bed_capacity_change", "If beds to increase by 10%, enter 1.1; if beds to decrease by 40%, enter 0.6. If no anticipated change, leave at 1.0.",
                            placement = "right", trigger = "hover"),
-                  dateInput(label = "Days until hospital bed change (if applicable):",
+                  numericInput(label = "Days until hospital bed change (if applicable):",
                             inputId = "tt_hosp_beds",
                             min = 0,
                             step = 1,
-                            value = NULL),
-                  bsTooltip("tt_hosp_beds", "Days until hospital bed capacity is anticipated to change (e.g. 7, 21).",
+                            value = 0.0),
+                  bsTooltip("tt_hosp_beds", "Days until hospital bed capacity is anticipated to change (e.g. 7, 21). If no anticipated change, leave at 0.",
                             placement = "right", trigger = "hover"),
-                  numericInput(label = "Percent increase/decrease in hospital beds after change (if applicable):",
-                               inputId = "hosp_bed_capacity",
+                  numericInput(label = "Ratio increase/decrease in hospital beds after change (if applicable):",
+                               inputId = "hosp_bed_capacity_change",
                                min = 0,
                                step = 0.01,
-                               value = NULL), 
-                  bsTooltip("hosp_bed_capacity_change", "If beds to increase by 10%, enter 1.1; if beds to decrease by 40%, enter 0.6.",
+                               value = 1.0), 
+                  bsTooltip("hosp_bed_capacity_change", "If beds to increase by 10%, enter 1.1; if beds to decrease by 40%, enter 0.6. If no anticipated change, leave at 1.0.",
                             placement = "right", trigger = "hover"),
                   numericInput(label = "Reporting fraction:",
                                inputId = "reporting_fraction",
@@ -155,7 +149,7 @@ ui = navbarPage("Delhi COVID-19 Simulator", theme = shinytheme("simplex"),
                                max = 14,
                                step = 1,
                                value = 0),
-                  bsTooltip("forecast", "Days to project into the future",
+                  bsTooltip("forecast", "Days to project into the future (e.g., 7, 14)",
                             placement = "right", trigger = "hover"),
                   tags$hr(),
                
@@ -220,7 +214,6 @@ server = function(input, output) {
       n_particles = 100, 
       
       population = pop_vector,
-      forecast = input$forecast, 
       baseline_contact_matrix = squire_matrix,
       
       date_R0_change = int_unique$dates_change,
@@ -230,7 +223,7 @@ server = function(input, output) {
       #hosp_bed_capacity = input$hosp_bed_capacity,
       #date_hosp_bed_capacity_change = input$date_hosp_bed_capacity_change,
       
-      baseline_ICU_bed_capacity = ICU_bed,
+      baseline_ICU_bed_capacity = ICU_bed
       #ICU_bed_capacity = input$ICU_bed_capacity,
       #date_ICU_bed_capacity_change = input$date_ICU_bed_capacity_change
     )
@@ -259,7 +252,6 @@ server = function(input, output) {
     output$plot2 <- renderPlot({
       
       # Set up dates to annotate plot
-      
       plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
                                    event=c("Lockdown 1.0", "Lockdown 3.0"))
       
@@ -268,99 +260,64 @@ server = function(input, output) {
               today <- data.frame(date = as.Date(NA), event = NA)
       )
       
-      plot(model_output$model, var_select = c("hospital_occupancy"), 
-           date_0 = max(df$date), x_var = "date") +
+      # Determine arguments for future bed change values
+      # based on inputs
+      tt_hosp_beds <- c(0, input$tt_hosp_beds)
+      hosp_bed_capacity_change <- c(1, input$hosp_bed_capacity_change)
+      
+      tt_ICU_beds <- c(0, input$tt_ICU_beds)
+      ICU_bed_capacity_change <- c(1, input$ICU_bed_capacity_change)
+      
+      print(paste("User input for tt_ICU_beds:", input$tt_ICU_beds))
+      print("help")
+      
+      # Create projection object (works like calibrate object)
+      p <- projections(r = model_output$model,
+                       time_period = input$forecast,
+                       hosp_bed_capacity_change = hosp_bed_capacity_change,
+                       tt_hosp_beds = tt_hosp_beds,
+                       ICU_bed_capacity_change = ICU_bed_capacity_change,
+                       tt_ICU_beds = tt_ICU_beds
+      )
+      
+      projection_plotting(r_list = list(p),
+                          scenarios = c(""),
+                          add_parms_to_scenarios = FALSE,
+                          var_select = c("hospital_occupancy"),
+                          date_0 = max(df$date),
+                          x_var = "date") +
         labs(title = "Projection for hospital bed occupancy") +
         ylab("No. of beds") +
         xlab("Date") +
-        geom_hline(yintercept = hosp_bed, linetype = 4) +  # show bed capacity line
+        geom_hline(yintercept = hosp_bed, linetype = 4) +   # show bed capacity line
         annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                 y = hosp_bed * 1.05, 
-                 label = "80% bed capacity", size = 3, 
+                 y = hosp_bed * 1.05,
+                 label = "80% bed capacity", size = 3,
                  fontface = 'italic', hjust = 0) +
         geom_segment(data = plotting_dates,                # Add lockdown lines
                      mapping = aes(x = date, xend = date,
                                    y = 0, yend = hosp_bed),
-                     color = 'darkgrey',
-                     alpha = 0.7,
-                     size = 1) +
-        geom_text(data = plotting_dates,                   # Annotate lockdown lines
-                  mapping = aes(x = date, 
-                                y = hosp_bed * 0.9, 
-                                label = event), 
-                  size = 3, angle = 90, vjust = -0.5, hjust = .9, 
-                  color = 'darkgrey', alpha = 0.7, 
-                  fontface = 'bold') +
-        geom_segment(data = today,                      # Plot "today" line
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = hosp_bed),
-                     color = 'darkmagenta',
-                     alpha = 0.5,
-                     size = 1) +
-        geom_text(data = today,                          # Annotate "today" line
-                  mapping = aes(x = date, y = 0, label = event), 
-                  size = 3, angle = 90, vjust = -0.5, hjust = 0, 
-                  color = 'darkmagenta', alpha = 0.5,
-                  fontface = 'italic') +
-        scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
-                     date_labels = "%b %d",               # mark x-ticks w/ month, day
-                     date_minor_breaks = "1 week"         # unmarked grid lines for each week
-        ) +
-        theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
-                                         hjust = 1)) +
-        scale_y_continuous(n.breaks = 8, 
-                           limits = c(0, hosp_bed * 1.1)) + 
-        theme(legend.position = "none")                   # suppress legend
-      
-    })  
-    
-    # Plot ICU bed projections
-    output$plot3 <- renderPlot({
-      
-      # Set up dates to annotate plot
-      
-      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
-                                   event=c("Lockdown 1.0", "Lockdown 3.0"))
-      
-      ifelse (input$forecast > 0, # If forecast == 0, no annotation
-              today <- data.frame(date = Sys.Date(), event = "Today"),
-              today <- data.frame(date = as.Date(NA), event = NA)
-      )
-      
-      plot(model_output$model, var_select = c("ICU_occupancy"), 
-           date_0 = max(df$date), x_var = "date") +
-        labs(title = "Projection for ICU bed occupancy") +
-        ylab("No. of beds") +
-        xlab("Date") +
-        geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
-        annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                 y = ICU_bed * 1.05, 
-                 label = "80% bed capacity", size = 3, 
-                 fontface = 'italic', hjust = 0) +
-        geom_segment(data = plotting_dates,                # Add lockdown lines
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = ICU_bed),
                      color = 'darkgrey',
                      alpha = 0.8,
                      size = 1) +
         geom_text(data = plotting_dates,                   # Annotate lockdown lines
-                  mapping = aes(x = date, 
-                                y = ICU_bed * 0.9, 
-                                label = event), 
-                  size = 3, angle = 90, vjust = -0.5, hjust = 0.9, 
-                  color = 'darkgrey', alpha = 0.8, 
+                  mapping = aes(x = date,
+                                y = hosp_bed * 0.9,
+                                label = event),
+                  size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
+                  color = 'darkgrey', alpha = 0.8,
                   fontface = 'bold') +
         geom_segment(data = today,
                      mapping = aes(x = date, xend = date,
-                                   y = 0, yend = ICU_bed),
+                                   y = 0, yend = hosp_bed),
                      color = 'darkmagenta',
                      alpha = 0.5,
                      size = 1) +
         geom_text(data = today,                          # Annotate today line
-                  mapping = aes(x = date, 
-                                y = 0, 
-                                label = event), 
-                  size = 3, angle = 90, vjust = -0.5, hjust = 0, 
+                  mapping = aes(x = date,
+                                y = 0,
+                                label = event),
+                  size = 3, angle = 90, vjust = -0.5, hjust = 0,
                   color = 'darkmagenta', alpha = 0.5,
                   fontface = 'italic') +
         scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
@@ -370,14 +327,97 @@ server = function(input, output) {
         theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                          hjust = 1)) +
         scale_y_continuous(n.breaks = 8,
-                           limits = c(0, ICU_bed * 1.1)) + 
+                           limits = c(0, hosp_bed * 1.1)) +
+        theme(legend.position = "none")                   # suppress legend
+      
+    })  
+    
+    # Plot ICU bed projections
+    output$plot3 <- renderPlot({
+      
+      # Set up dates to annotate plot
+      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
+                                   event=c("Lockdown 1.0", "Lockdown 3.0"))
+      
+      ifelse (input$forecast > 0, # If forecast == 0, no annotation
+              today <- data.frame(date = Sys.Date(), event = "Today"),
+              today <- data.frame(date = as.Date(NA), event = NA)
+      )
+      
+      # Determine arguments for future bed change values
+      # based on inputs
+      tt_hosp_beds <- c(0, input$tt_hosp_beds)
+      hosp_bed_capacity_change <- c(1, input$hosp_bed_capacity_change)
+      
+      tt_ICU_beds <- c(0, input$tt_ICU_beds)
+      ICU_bed_capacity_change <- c(1, input$ICU_bed_capacity_change)
+      
+      print(paste("User input for tt_ICU_beds:", input$tt_ICU_beds))
+      print("help")
+      
+      # Create projection object (works like calibrate object)
+      p <- projections(r = model_output$model,
+                       time_period = input$forecast,
+                       hosp_bed_capacity_change = hosp_bed_capacity_change,
+                       tt_hosp_beds = tt_hosp_beds,
+                       ICU_bed_capacity_change = ICU_bed_capacity_change,
+                       tt_ICU_beds = tt_ICU_beds
+      )
+      
+      projection_plotting(r_list = list(p),
+                          scenarios = c(""),
+                          add_parms_to_scenarios = FALSE,
+                          var_select = c("ICU_occupancy"),
+                          date_0 = max(df$date),
+                          x_var = "date") +
+        labs(title = "Projection for ICU bed occupancy") +
+        ylab("No. of beds") +
+        xlab("Date") +
+        geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
+        annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+                 y = ICU_bed * 1.05,
+                 label = "80% bed capacity", size = 3,
+                 fontface = 'italic', hjust = 0) +
+        geom_segment(data = plotting_dates,                # Add lockdown lines
+                     mapping = aes(x = date, xend = date,
+                                   y = 0, yend = ICU_bed),
+                     color = 'darkgrey',
+                     alpha = 0.8,
+                     size = 1) +
+        geom_text(data = plotting_dates,                   # Annotate lockdown lines
+                  mapping = aes(x = date,
+                                y = ICU_bed * 0.9,
+                                label = event),
+                  size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
+                  color = 'darkgrey', alpha = 0.8,
+                  fontface = 'bold') +
+        geom_segment(data = today,
+                     mapping = aes(x = date, xend = date,
+                                   y = 0, yend = ICU_bed),
+                     color = 'darkmagenta',
+                     alpha = 0.5,
+                     size = 1) +
+        geom_text(data = today,                          # Annotate today line
+                  mapping = aes(x = date,
+                                y = 0,
+                                label = event),
+                  size = 3, angle = 90, vjust = -0.5, hjust = 0,
+                  color = 'darkmagenta', alpha = 0.5,
+                  fontface = 'italic') +
+        scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
+                     date_labels = "%b %d",               # mark x-ticks w/ month, day
+                     date_minor_breaks = "1 week"         # unmarked grid lines for each week
+        ) +
+        theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
+                                         hjust = 1)) +
+        scale_y_continuous(n.breaks = 8,
+                           limits = c(0, ICU_bed * 1.1)) +
         theme(legend.position = "none")                   # suppress legend
       
     })
     
     removeModal()
-  }
-  )
+  })
   
   # 2. Run TEST MODEL when button is pressed
   observeEvent(input$run_test_model, { # THIS SECTION IS NEW AS OF 2020.06.01 - HS
@@ -402,7 +442,6 @@ server = function(input, output) {
       n_particles = 10, 
       
       population = pop_vector,
-      #forecast = input$forecast, 
       baseline_contact_matrix = squire_matrix,
       
       date_R0_change = int_unique$dates_change,
@@ -412,7 +451,7 @@ server = function(input, output) {
       #hosp_bed_capacity = input$hosp_bed_capacity,
       #date_hosp_bed_capacity_change = input$date_hosp_bed_capacity_change,
       
-      baseline_ICU_bed_capacity = ICU_bed,
+      baseline_ICU_bed_capacity = ICU_bed
       #ICU_bed_capacity = input$ICU_bed_capacity,
       #date_ICU_bed_capacity_change = input$date_ICU_bed_capacity_change,
     )
@@ -423,6 +462,7 @@ server = function(input, output) {
     
     # Plot outputs
     
+    # Plot model fit
     output$plot1 <- renderPlot({
       
       plot(model_output$model, var_select = c("deaths"), particle_fit = TRUE) +          
@@ -442,7 +482,6 @@ server = function(input, output) {
     output$plot2 <- renderPlot({
       
       # Set up dates to annotate plot
-      
       plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
                                    event=c("Lockdown 1.0", "Lockdown 3.0"))
       
@@ -451,208 +490,64 @@ server = function(input, output) {
               today <- data.frame(date = as.Date(NA), event = NA)
       )
       
-'      plot(model_output$model, var_select = c("hospital_occupancy"), 
-            date_0 = max(df$date), x_var = "date") +
-         labs(title = "Projection for hospital bed occupancy") +
-         ylab("No. of beds") +
-         xlab("Date") +
-         geom_hline(yintercept = hosp_bed, linetype = 4) +  # show bed capacity line
-         annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                  y = hosp_bed * 1.05, 
-                  label = "80% bed capacity", size = 3, 
-                  fontface = 'italic', hjust = 0) +
-         geom_segment(data = plotting_dates,                # Add lockdown lines
-                      mapping = aes(x = date, xend = date,
-                                    y = 0, yend = hosp_bed),
-                      color = 'darkgrey',
-                      alpha = 0.7,
-                      size = 1) +
-         geom_text(data = plotting_dates,                   # Annotate lockdown lines
-                   mapping = aes(x = date, 
-                                 y = hosp_bed * 0.9, 
-                                 label = event), 
-                   size = 3, angle = 90, vjust = -0.5, hjust = .9, 
-                   color = 'darkgrey', alpha = 0.7, 
-                   fontface = 'bold') +
-         geom_segment(data = today,                      # Plot "today" line
-                      mapping = aes(x = date, xend = date,
-                                    y = 0, yend = hosp_bed),
-                      color = 'darkmagenta',
-                      alpha = 0.5,
-                      size = 1) +
-         geom_text(data = today,                          # Annotate "today" line
-                   mapping = aes(x = date, y = 0, label = event), 
-                   size = 3, angle = 90, vjust = -0.5, hjust = 0, 
-                   color = 'darkmagenta', alpha = 0.5,
-                   fontface = 'italic') +
-         scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
-                      date_labels = "%b %d",               # mark x-ticks w/ month, day
-                      date_minor_breaks = "1 week"         # unmarked grid lines for each week
-         ) +
-         theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
-                                          hjust = 1)) +
-         scale_y_continuous(n.breaks = 8, 
-                            limits = c(0, hosp_bed * 1.1)) + 
-         theme(legend.position = "none")                   # suppress legend
-       
-     }) ' 
-    
-    # Determine new bed capacities
-    hosp_bed_capacity_change <- c(1, input$hosp_bed_capacity_change)
-    ICU_bed_capacity_change <- c(1, input$ICU_bed_capacity_change)
-    
-    # Generate projection object (works like calibrate object)
-    p <- projections(r = c(model_output$model, 
-                     time_period = input$forecast,
-                     hosp_bed_capacity_change = hosp_bed_capacity_change, 
-                     tt_hosp_beds = c(0, 14),
-                     ICU_bed_capacity_change = hosp_bed_capacity_change, 
-                     tt_ICU_beds = c(0, 14),
-    )
-    
-    # Plot projection object
-    projection_plotting(
-      r_list = list(p),
-      var_select = c("hospital_occupancy"),
-      scenarios = c("With bed change"),
-      add_parms_to_scenarios = FALSE,
-      ci = TRUE,
-      date_0 = max(df$date), 
-      x_var = "date") +
-      labs(title = "Projection for hospital bed occupancy") +
-      ylab("No. of beds") +
-      xlab("Date") +
-      geom_hline(yintercept = hosp_bed , linetype = 4) + # show bed capacity line
-      annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-               y = hosp_bed * 1.05, 
-               label = "80% bed capacity", size = 3, 
-               fontface = 'italic', hjust = 0) +
-      geom_segment(data = plotting_dates,                # Add lockdown lines
-                   mapping = aes(x = date, xend = date,
-                                 y = 0, yend = hosp_bed),
-                   color = 'darkgrey',
-                   alpha = 0.7,
-                   size = 1) +
-      geom_text(data = plotting_dates,                   # Annotate lockdown lines
-                mapping = aes(x = date, 
-                              y = hosp_bed * 0.9, 
-                              label = event), 
-                size = 3, angle = 90, vjust = -0.5, hjust = .9, 
-                color = 'darkgrey', alpha = 0.7, 
-                fontface = 'bold') +
-      geom_segment(data = today,                      # Plot "today" line
-                   mapping = aes(x = date, xend = date,
-                                 y = 0, yend = hosp_bed),
-                   color = 'darkmagenta',
-                   alpha = 0.3,
-                   size = 1) +
-      geom_text(data = today,                          # Annotate "today" line
-                mapping = aes(x = date, y = hosp_bed * 0.9, label = event), 
-                size = 3, angle = 90, vjust = -0.5, hjust = .9, 
-                color = 'darkmagenta', alpha = 0.5,
-                fontface = 'italic') +
-      scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
-                   date_labels = "%b %d",               # mark x-ticks w/ month, day
-                   date_minor_breaks = "1 week",        # unmarked grid lines for each week
-      ) +
-      theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
-                                       hjust = 1)) +
-      scale_y_continuous(n.breaks = 8, 
-                         limits = c(0, hosp_bed * 1.1)) + 
-      theme(legend.position = "none")                   # suppress legend
-    
-    # 
-    # plot(model_output(), var_select = c("hospital_occupancy"), 
-    #      date_0 = max(df$date), x_var = "date") +
-    #      labs(title = "Projection for hospital bed occupancy") +
-    #      ylab("No. of beds") +
-    #      xlab("Date") +
-    #      geom_hline(yintercept = hosp_bed, linetype = 4) +  # show bed capacity line
-    #      annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-    #                y = hosp_bed * 1.05, 
-    #                label = "80% bed capacity", size = 3, 
-    #                fontface = 'italic', hjust = 0) +
-    #      geom_segment(data = plotting_dates,                # Add lockdown lines
-    #                   mapping = aes(x = date, xend = date,
-    #                                 y = 0, yend = hosp_bed),
-    #                   color = 'darkgrey',
-    #                   alpha = 0.7,
-    #                   size = 1) +
-    #      geom_text(data = plotting_dates,                   # Annotate lockdown lines
-    #                mapping = aes(x = date, 
-    #                              y = hosp_bed * 0.9, 
-    #                              label = event), 
-    #                size = 3, angle = 90, vjust = -0.5, hjust = .9, 
-    #                color = 'darkgrey', alpha = 0.7, 
-    #                fontface = 'bold') +
-    #      geom_segment(data = today,                      # Plot "today" line
-    #                   mapping = aes(x = date, xend = date,
-    #                                 y = 0, yend = hosp_bed),
-    #                   color = 'darkmagenta',
-    #                   alpha = 0.5,
-    #                   size = 1) +
-    #      geom_text(data = today,                          # Annotate "today" line
-    #                mapping = aes(x = date, y = 0, label = event), 
-    #                size = 3, angle = 90, vjust = -0.5, hjust = 0, 
-    #                color = 'darkmagenta', alpha = 0.5,
-    #                fontface = 'italic') +
-    #      scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
-    #                   date_labels = "%b %d",               # mark x-ticks w/ month, day
-    #                   date_minor_breaks = "1 week"         # unmarked grid lines for each week
-    #   ) +
-    #      theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
-    #                                       hjust = 1)) +
-    #      scale_y_continuous(n.breaks = 8, 
-    #                         limits = c(0, hosp_bed * 1.1)) + 
-    #      theme(legend.position = "none")                   # suppress legend
-
-    # Plot ICU bed projections
-    output$plot3 <- renderPlot({
+      # Determine arguments for future bed change values
+      # based on inputs
+      tt_hosp_beds <- c(0, input$tt_hosp_beds)
+      hosp_bed_capacity_change <- c(1, input$hosp_bed_capacity_change)
       
-      # Set up dates to annotate plot
+      tt_ICU_beds <- c(0, input$tt_ICU_beds)
+      ICU_bed_capacity_change <- c(1, input$ICU_bed_capacity_change)
       
-      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
-                                   event=c("Lockdown 1.0", "Lockdown 3.0"))
+      print(paste("User input for tt_ICU_beds:", input$tt_ICU_beds))
+      print("help")
       
-      ifelse (input$forecast > 0, # If forecast == 0, no annotation
-              today <- data.frame(date = Sys.Date(), event = "Today"),
-              today <- data.frame(date = as.Date(NA), event = NA)
+      # Create projection object (works like calibrate object)
+      p <- projections(r = model_output$model,
+                       time_period = input$forecast,
+                       hosp_bed_capacity_change = hosp_bed_capacity_change,
+                       tt_hosp_beds = tt_hosp_beds,
+                       ICU_bed_capacity_change = ICU_bed_capacity_change,
+                       tt_ICU_beds = tt_ICU_beds
       )
       
-      plot(model_output$model, var_select = c("ICU_occupancy"), 
-           date_0 = max(df$date), x_var = "date") +
-        labs(title = "Projection for ICU bed occupancy") +
+      projection_plotting(r_list = list(p),
+                          scenarios = c(""),
+                          add_parms_to_scenarios = FALSE,
+                          var_select = c("hospital_occupancy"),
+                          date_0 = max(df$date),
+                          x_var = "date") +
+        labs(title = "Projection for hospital bed occupancy") +
         ylab("No. of beds") +
         xlab("Date") +
-        geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
+        geom_hline(yintercept = hosp_bed, linetype = 4) +   # show bed capacity line
         annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                 y = ICU_bed * 1.05, 
-                 label = "80% bed capacity", size = 3, 
+                 y = hosp_bed * 1.05,
+                 label = "80% bed capacity", size = 3,
                  fontface = 'italic', hjust = 0) +
         geom_segment(data = plotting_dates,                # Add lockdown lines
                      mapping = aes(x = date, xend = date,
-                                   y = 0, yend = ICU_bed),
+                                   y = 0, yend = hosp_bed),
                      color = 'darkgrey',
                      alpha = 0.8,
                      size = 1) +
         geom_text(data = plotting_dates,                   # Annotate lockdown lines
-                  mapping = aes(x = date, 
-                                y = ICU_bed * 0.9, 
-                                label = event), 
-                  size = 3, angle = 90, vjust = -0.5, hjust = 0.9, 
-                  color = 'darkgrey', alpha = 0.8, 
+                  mapping = aes(x = date,
+                                y = hosp_bed * 0.9,
+                                label = event),
+                  size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
+                  color = 'darkgrey', alpha = 0.8,
                   fontface = 'bold') +
         geom_segment(data = today,
                      mapping = aes(x = date, xend = date,
-                                   y = 0, yend = ICU_bed),
+                                   y = 0, yend = hosp_bed),
                      color = 'darkmagenta',
                      alpha = 0.5,
                      size = 1) +
         geom_text(data = today,                          # Annotate today line
-                  mapping = aes(x = date, 
-                                y = 0, 
-                                label = event), 
-                  size = 3, angle = 90, vjust = -0.5, hjust = 0, 
+                  mapping = aes(x = date,
+                                y = 0,
+                                label = event),
+                  size = 3, angle = 90, vjust = -0.5, hjust = 0,
                   color = 'darkmagenta', alpha = 0.5,
                   fontface = 'italic') +
         scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
@@ -662,7 +557,90 @@ server = function(input, output) {
         theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                          hjust = 1)) +
         scale_y_continuous(n.breaks = 8,
-                           limits = c(0, ICU_bed * 1.1)) + 
+                           limits = c(0, hosp_bed * 1.1)) +
+        theme(legend.position = "none")                   # suppress legend
+    })  
+  
+    # Plot ICU bed projections
+    output$plot3 <- renderPlot({
+      
+      # Set up dates to annotate plot
+      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
+                                   event=c("Lockdown 1.0", "Lockdown 3.0"))
+      
+      ifelse (input$forecast > 0, # If forecast == 0, no annotation
+              today <- data.frame(date = Sys.Date(), event = "Today"),
+              today <- data.frame(date = as.Date(NA), event = NA)
+      )
+      
+      # Determine arguments for future bed change values
+      # based on inputs
+      tt_hosp_beds <- c(0, input$tt_hosp_beds)
+      hosp_bed_capacity_change <- c(1, input$hosp_bed_capacity_change)
+      
+      tt_ICU_beds <- c(0, input$tt_ICU_beds)
+      ICU_bed_capacity_change <- c(1, input$ICU_bed_capacity_change)
+      
+      print(paste("User input for tt_ICU_beds:", input$tt_ICU_beds))
+      print("help")
+
+      # Create projection object (works like calibrate object)
+      p <- projections(r = model_output$model,
+                       time_period = input$forecast,
+                       hosp_bed_capacity_change = hosp_bed_capacity_change,
+                       tt_hosp_beds = tt_hosp_beds,
+                       ICU_bed_capacity_change = ICU_bed_capacity_change,
+                       tt_ICU_beds = tt_ICU_beds
+      )
+
+      projection_plotting(r_list = list(p),
+                          scenarios = c(""),
+                          add_parms_to_scenarios = FALSE,
+                          var_select = c("ICU_occupancy"),
+                          date_0 = max(df$date),
+                          x_var = "date") +
+        labs(title = "Projection for ICU bed occupancy") +
+        ylab("No. of beds") +
+        xlab("Date") +
+        geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
+        annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+                 y = ICU_bed * 1.05,
+                 label = "80% bed capacity", size = 3,
+                 fontface = 'italic', hjust = 0) +
+        geom_segment(data = plotting_dates,                # Add lockdown lines
+                     mapping = aes(x = date, xend = date,
+                                   y = 0, yend = ICU_bed),
+                     color = 'darkgrey',
+                     alpha = 0.8,
+                     size = 1) +
+        geom_text(data = plotting_dates,                   # Annotate lockdown lines
+                  mapping = aes(x = date,
+                                y = ICU_bed * 0.9,
+                                label = event),
+                  size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
+                  color = 'darkgrey', alpha = 0.8,
+                  fontface = 'bold') +
+        geom_segment(data = today,
+                     mapping = aes(x = date, xend = date,
+                                   y = 0, yend = ICU_bed),
+                     color = 'darkmagenta',
+                     alpha = 0.5,
+                     size = 1) +
+        geom_text(data = today,                          # Annotate today line
+                  mapping = aes(x = date,
+                                y = 0,
+                                label = event),
+                  size = 3, angle = 90, vjust = -0.5, hjust = 0,
+                  color = 'darkmagenta', alpha = 0.5,
+                  fontface = 'italic') +
+        scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
+                     date_labels = "%b %d",               # mark x-ticks w/ month, day
+                     date_minor_breaks = "1 week"         # unmarked grid lines for each week
+        ) +
+        theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
+                                         hjust = 1)) +
+        scale_y_continuous(n.breaks = 8,
+                           limits = c(0, ICU_bed * 1.1)) +
         theme(legend.position = "none")                   # suppress legend
       
     })
