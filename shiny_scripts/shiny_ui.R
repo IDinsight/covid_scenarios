@@ -12,7 +12,7 @@ library(shinyBS)
 #' @param name The name to be used for the app
 #' @retun ui object
 get_ui <- function(name) {
-  intro_text = read_file("./shiny_assets/introduction.txt") 
+  intro_text = read_file("./shiny_scripts/shiny_assets/introduction.txt") 
   tabs <- list(get_overview_tab(intro_text), get_simulator_tab())
   ui <- get_tabbed_ui(name, tabs)
   
