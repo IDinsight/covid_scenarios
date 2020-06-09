@@ -89,29 +89,6 @@ out <- calibrate(
   baseline_ICU_bed_capacity = ICU_bed,
 )
 
-# Same model, but projecting only 2 weeks
-
-# Fit model
-out1 <- calibrate(
-  reporting_fraction = 1,
-  data = df,
-  R0_min = 2,
-  R0_max = 7,
-  R0_step = 0.5,
-  first_start_date = "2020-03-02",
-  last_start_date = "2020-03-12",
-  day_step = 1,
-  replicates = 100,  # Make sure this is 100 if final
-  n_particles = 100, # Make sure this is 100 if final
-  population = pop_vector,
-  forecast = 14, # 70 
-  baseline_contact_matrix = squire_matrix,
-  date_R0_change = int_unique$dates_change,
-  R0_change = int_unique$R0_change,
-  baseline_hosp_bed_capacity = hosp_bed, 
-  baseline_ICU_bed_capacity = ICU_bed
-)
-
 # SECOND MODEL: 
   # Mar 23 to May 03 with phase1_matrix;
   # May 03 onwards with phase3_matrix;
@@ -171,6 +148,8 @@ model_fit <- plot(out, "deaths", particle_fit = TRUE) +
                                                    hjust = 1)) +    
                   scale_y_continuous() +
                   ylim(c(0, max(out$scan_results$inputs$data$deaths) + 15))  # change vertical limits
+
+model_fit
 
 # Save viz
 ggsave("visualisations/model_fit.png")
@@ -303,14 +282,14 @@ ggsave("visualisations/projected_ICU_occ.png")
 ############################## PROJECTION PLOTTING
 ##################################################
 
-input.hosp_bed_capacity_change <- 1.3
-input.ICU_bed_capacity_change <- 1.3
-
-hosp_bed_capacity_change <- c(1, input.hosp_bed_capacity_change)
-ICU_bed_capacity_change <- c(1, input.ICU_bed_capacity_change)
+# input.hosp_bed_capacity_change <- 1.3
+# input.ICU_bed_capacity_change <- 1.3
+# 
+# hosp_bed_capacity_change <- c(1, input.hosp_bed_capacity_change)
+# ICU_bed_capacity_change <- c(1, input.ICU_bed_capacity_change)
 
 p <- projections(r = out, 
-                 time_period = 14,
+                 time_period = 35,
                  hosp_bed_capacity_change = 1, 
                  tt_hosp_beds = 0,
                  ICU_bed_capacity_change = 1, 

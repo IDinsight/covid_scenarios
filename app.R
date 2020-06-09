@@ -53,10 +53,11 @@ future::plan(future::multiprocess())
 # Dates of interventions
 phase1 <- "2020-03-24"
 phase3 <- "2020-05-03"
+unlock1 <- "20202-06-08"
 
 # Intervention parameters to pass
-int_unique <- list(dates_change = c(phase1, phase3), 
-                   R0_change = c(0.2, 0.5)) 
+int_unique <- list(dates_change = c(phase1, phase3, unlock1), 
+                   R0_change = c(0.2, 0.5, 0.75)) 
 
 
 #---------#
@@ -89,8 +90,8 @@ ui = navbarPage("Delhi COVID-19 Simulator", theme = shinytheme("simplex"),
   titlePanel(
     fluidRow(
       column(6, "Simulations", style='font-size:100%; font-weight: bold'),
-      column(3, img(height = 100, src = "delhi_govt.png")),
-      column(3, img(height = 100, src = "idinsight.png"))
+      #column(3, img(height = 100, src = "delhi_govt.png")),
+      #column(3, img(height = 100, src = "idinsight.png"))
       )
   ),
 
@@ -107,20 +108,6 @@ ui = navbarPage("Delhi COVID-19 Simulator", theme = shinytheme("simplex"),
   
   # Solicit user input
   sidebarPanel("Model Parameters", style = 'font-size:100%; font-weight: bold',
-                  numericInput(label = "Days until ICU bed change (if applicable):",
-                               inputId = "tt_ICU_beds",
-                               min = 0,
-                               step = 1,
-                               value = 0.0),
-                  bsTooltip("tt_ICU_beds", "Days until ICU bed capacity is anticipated to change (e.g. 7, 21). If no anticipated change, leave at 0.",
-                            placement = "right", trigger = "hover"),
-                  numericInput(label = "Ratio increase/decrease in ICU beds after change (if applicable):",
-                               inputId = "ICU_bed_capacity_change",
-                               min = 0,
-                               step = 0.01,
-                               value = 1.0), 
-                  bsTooltip("ICU_bed_capacity_change", "If beds to increase by 10%, enter 1.1; if beds to decrease by 40%, enter 0.6. If no anticipated change, leave at 1.0.",
-                           placement = "right", trigger = "hover"),
                   numericInput(label = "Days until hospital bed change (if applicable):",
                             inputId = "tt_hosp_beds",
                             min = 0,
@@ -134,6 +121,20 @@ ui = navbarPage("Delhi COVID-19 Simulator", theme = shinytheme("simplex"),
                                step = 0.01,
                                value = 1.0), 
                   bsTooltip("hosp_bed_capacity_change", "If beds to increase by 10%, enter 1.1; if beds to decrease by 40%, enter 0.6. If no anticipated change, leave at 1.0.",
+                            placement = "right", trigger = "hover"),
+                  numericInput(label = "Days until ICU bed change (if applicable):",
+                               inputId = "tt_ICU_beds",
+                               min = 0,
+                               step = 1,
+                               value = 0.0),
+                  bsTooltip("tt_ICU_beds", "Days until ICU bed capacity is anticipated to change (e.g. 7, 21). If no anticipated change, leave at 0.",
+                            placement = "right", trigger = "hover"),
+                  numericInput(label = "Ratio increase/decrease in ICU beds after change (if applicable):",
+                               inputId = "ICU_bed_capacity_change",
+                               min = 0,
+                               step = 0.01,
+                               value = 1.0), 
+                  bsTooltip("ICU_bed_capacity_change", "If beds to increase by 10%, enter 1.1; if beds to decrease by 40%, enter 0.6. If no anticipated change, leave at 1.0.",
                             placement = "right", trigger = "hover"),
                   numericInput(label = "Reporting fraction:",
                                inputId = "reporting_fraction",
@@ -252,8 +253,8 @@ server = function(input, output) {
     output$plot2 <- renderPlot({
       
       # Set up dates to annotate plot
-      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
-                                   event=c("Lockdown 1.0", "Lockdown 3.0"))
+      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3, unlock1)),
+                                   event=c("Lockdown 1.0", "Lockdown 3.0", "Unlock 1.0"))
       
       ifelse (input$forecast > 0, # If forecast == 0, no annotation
               today <- data.frame(date = Sys.Date(), event = "Today"),
@@ -268,9 +269,6 @@ server = function(input, output) {
       tt_ICU_beds <- c(0, input$tt_ICU_beds)
       ICU_bed_capacity_change <- c(1, input$ICU_bed_capacity_change)
       
-      print(paste("User input for tt_ICU_beds:", input$tt_ICU_beds))
-      print("help")
-      
       # Create projection object (works like calibrate object)
       p <- projections(r = model_output$model,
                        time_period = input$forecast,
@@ -283,23 +281,22 @@ server = function(input, output) {
       projection_plotting(r_list = list(p),
                           scenarios = c(""),
                           add_parms_to_scenarios = FALSE,
-                          var_select = c("hospital_occupancy"),
+                          var_select = c("hospital_demand"),
                           date_0 = max(df$date),
                           x_var = "date") +
-        labs(title = "Projection for hospital bed occupancy") +
+        labs(title = "Projection for hospital bed demand") +
         ylab("No. of beds") +
         xlab("Date") +
-        geom_hline(yintercept = hosp_bed, linetype = 4) +   # show bed capacity line
-        annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                 y = hosp_bed * 1.05,
-                 label = "80% bed capacity", size = 3,
-                 fontface = 'italic', hjust = 0) +
-        geom_segment(data = plotting_dates,                # Add lockdown lines
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = hosp_bed),
-                     color = 'darkgrey',
-                     alpha = 0.8,
-                     size = 1) +
+        #geom_hline(yintercept = hosp_bed, linetype = 4) +  # show bed capacity line
+        #annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+        #         y = hosp_bed * 1.05,
+        #         label = "80% bed capacity", size = 3,
+        #         fontface = 'italic', hjust = 0) +
+        geom_vline(data = plotting_dates,                  # Add lockdown lines
+                   mapping = aes(xintercept = date),
+                   color = 'darkgrey',
+                   alpha = 0.8,
+                   size = 1) +
         geom_text(data = plotting_dates,                   # Annotate lockdown lines
                   mapping = aes(x = date,
                                 y = hosp_bed * 0.9,
@@ -307,12 +304,11 @@ server = function(input, output) {
                   size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
                   color = 'darkgrey', alpha = 0.8,
                   fontface = 'bold') +
-        geom_segment(data = today,
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = hosp_bed),
-                     color = 'darkmagenta',
-                     alpha = 0.5,
-                     size = 1) +
+        geom_vline(data = today,
+                   mapping = aes(xintercept = date),
+                   color = 'darkmagenta',
+                   alpha = 0.5,
+                   size = 1) +
         geom_text(data = today,                          # Annotate today line
                   mapping = aes(x = date,
                                 y = 0,
@@ -332,12 +328,12 @@ server = function(input, output) {
       
     })  
     
-    # Plot ICU bed projections
+    # Plot ICU projections
     output$plot3 <- renderPlot({
       
       # Set up dates to annotate plot
-      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
-                                   event=c("Lockdown 1.0", "Lockdown 3.0"))
+      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3, unlock1)),
+                                   event=c("Lockdown 1.0", "Lockdown 3.0", "Unlock 1.0"))
       
       ifelse (input$forecast > 0, # If forecast == 0, no annotation
               today <- data.frame(date = Sys.Date(), event = "Today"),
@@ -367,23 +363,22 @@ server = function(input, output) {
       projection_plotting(r_list = list(p),
                           scenarios = c(""),
                           add_parms_to_scenarios = FALSE,
-                          var_select = c("ICU_occupancy"),
+                          var_select = c("ICU_demand"),
                           date_0 = max(df$date),
                           x_var = "date") +
-        labs(title = "Projection for ICU bed occupancy") +
+        labs(title = "Projection for ICU bed demand") +
         ylab("No. of beds") +
         xlab("Date") +
-        geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
-        annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                 y = ICU_bed * 1.05,
-                 label = "80% bed capacity", size = 3,
-                 fontface = 'italic', hjust = 0) +
-        geom_segment(data = plotting_dates,                # Add lockdown lines
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = ICU_bed),
-                     color = 'darkgrey',
-                     alpha = 0.8,
-                     size = 1) +
+        #geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
+        #annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+        #         y = ICU_bed * 1.05,
+        #         label = "80% bed capacity", size = 3,
+        #         fontface = 'italic', hjust = 0) +
+        geom_vline(data = plotting_dates,                # Add lockdown lines
+                   mapping = aes(xintercept = date),
+                   color = 'darkgrey',
+                   alpha = 0.8,
+                   size = 1) +
         geom_text(data = plotting_dates,                   # Annotate lockdown lines
                   mapping = aes(x = date,
                                 y = ICU_bed * 0.9,
@@ -391,12 +386,11 @@ server = function(input, output) {
                   size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
                   color = 'darkgrey', alpha = 0.8,
                   fontface = 'bold') +
-        geom_segment(data = today,
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = ICU_bed),
-                     color = 'darkmagenta',
-                     alpha = 0.5,
-                     size = 1) +
+        geom_vline(data = today,
+                   mapping = aes(xintercept = date),
+                   color = 'darkmagenta',
+                   alpha = 0.5,
+                   size = 1) +
         geom_text(data = today,                          # Annotate today line
                   mapping = aes(x = date,
                                 y = 0,
@@ -420,10 +414,10 @@ server = function(input, output) {
   })
   
   # 2. Run TEST MODEL when button is pressed
-  observeEvent(input$run_test_model, { # THIS SECTION IS NEW AS OF 2020.06.01 - HS
+  observeEvent(input$run_test_model, {
     
     # Create a Progress object
-    showModal(modalDialog("Running model. This may take a few seconds.", footer = NULL))
+    showModal(modalDialog("Running model. This may take a few seconds. This is a test model, generated quickly; interpret results with caution.", footer = NULL))
     
     model_output$model <- calibrate (
       reporting_fraction = input$reporting_fraction,
@@ -482,8 +476,8 @@ server = function(input, output) {
     output$plot2 <- renderPlot({
       
       # Set up dates to annotate plot
-      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
-                                   event=c("Lockdown 1.0", "Lockdown 3.0"))
+      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3, unlock1)),
+                                   event=c("Lockdown 1.0", "Lockdown 3.0", "Unlock 1.0"))
       
       ifelse (input$forecast > 0, # If forecast == 0, no annotation
               today <- data.frame(date = Sys.Date(), event = "Today"),
@@ -498,9 +492,6 @@ server = function(input, output) {
       tt_ICU_beds <- c(0, input$tt_ICU_beds)
       ICU_bed_capacity_change <- c(1, input$ICU_bed_capacity_change)
       
-      print(paste("User input for tt_ICU_beds:", input$tt_ICU_beds))
-      print("help")
-      
       # Create projection object (works like calibrate object)
       p <- projections(r = model_output$model,
                        time_period = input$forecast,
@@ -513,23 +504,22 @@ server = function(input, output) {
       projection_plotting(r_list = list(p),
                           scenarios = c(""),
                           add_parms_to_scenarios = FALSE,
-                          var_select = c("hospital_occupancy"),
+                          var_select = c("hospital_demand"),
                           date_0 = max(df$date),
                           x_var = "date") +
-        labs(title = "Projection for hospital bed occupancy") +
+        labs(title = "Projection for hospital bed demand") +
         ylab("No. of beds") +
         xlab("Date") +
-        geom_hline(yintercept = hosp_bed, linetype = 4) +   # show bed capacity line
-        annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                 y = hosp_bed * 1.05,
-                 label = "80% bed capacity", size = 3,
-                 fontface = 'italic', hjust = 0) +
-        geom_segment(data = plotting_dates,                # Add lockdown lines
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = hosp_bed),
-                     color = 'darkgrey',
-                     alpha = 0.8,
-                     size = 1) +
+        #geom_hline(yintercept = hosp_bed, linetype = 4) +  # show bed capacity line
+        #annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+        #         y = hosp_bed * 1.05,
+        #         label = "80% bed capacity", size = 3,
+        #         fontface = 'italic', hjust = 0) +
+        geom_vline(data = plotting_dates,                  # Add lockdown lines
+                   mapping = aes(xintercept = date),
+                   color = 'darkgrey',
+                   alpha = 0.8,
+                   size = 1) +
         geom_text(data = plotting_dates,                   # Annotate lockdown lines
                   mapping = aes(x = date,
                                 y = hosp_bed * 0.9,
@@ -537,12 +527,11 @@ server = function(input, output) {
                   size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
                   color = 'darkgrey', alpha = 0.8,
                   fontface = 'bold') +
-        geom_segment(data = today,
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = hosp_bed),
-                     color = 'darkmagenta',
-                     alpha = 0.5,
-                     size = 1) +
+        geom_vline(data = today,
+                   mapping = aes(xintercept = date),
+                   color = 'darkmagenta',
+                   alpha = 0.5,
+                   size = 1) +
         geom_text(data = today,                          # Annotate today line
                   mapping = aes(x = date,
                                 y = 0,
@@ -565,8 +554,8 @@ server = function(input, output) {
     output$plot3 <- renderPlot({
       
       # Set up dates to annotate plot
-      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3)),
-                                   event=c("Lockdown 1.0", "Lockdown 3.0"))
+      plotting_dates <- data.frame(date=as.Date(c(phase1, phase3, unlock1)),
+                                   event=c("Lockdown 1.0", "Lockdown 3.0", "Unlock 1.0"))
       
       ifelse (input$forecast > 0, # If forecast == 0, no annotation
               today <- data.frame(date = Sys.Date(), event = "Today"),
@@ -596,23 +585,22 @@ server = function(input, output) {
       projection_plotting(r_list = list(p),
                           scenarios = c(""),
                           add_parms_to_scenarios = FALSE,
-                          var_select = c("ICU_occupancy"),
+                          var_select = c("ICU_demand"),
                           date_0 = max(df$date),
                           x_var = "date") +
-        labs(title = "Projection for ICU bed occupancy") +
+        labs(title = "Projection for ICU bed demand") +
         ylab("No. of beds") +
         xlab("Date") +
-        geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
-        annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                 y = ICU_bed * 1.05,
-                 label = "80% bed capacity", size = 3,
-                 fontface = 'italic', hjust = 0) +
-        geom_segment(data = plotting_dates,                # Add lockdown lines
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = ICU_bed),
-                     color = 'darkgrey',
-                     alpha = 0.8,
-                     size = 1) +
+        #geom_hline(yintercept = ICU_bed, linetype = 4) +   # show bed capacity line
+        #annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+        #         y = ICU_bed * 1.05,
+        #         label = "80% bed capacity", size = 3,
+        #         fontface = 'italic', hjust = 0) +
+        geom_vline(data = plotting_dates,                # Add lockdown lines
+                   mapping = aes(xintercept = date),
+                   color = 'darkgrey',
+                   alpha = 0.8,
+                   size = 1) +
         geom_text(data = plotting_dates,                   # Annotate lockdown lines
                   mapping = aes(x = date,
                                 y = ICU_bed * 0.9,
@@ -620,12 +608,11 @@ server = function(input, output) {
                   size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
                   color = 'darkgrey', alpha = 0.8,
                   fontface = 'bold') +
-        geom_segment(data = today,
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = ICU_bed),
-                     color = 'darkmagenta',
-                     alpha = 0.5,
-                     size = 1) +
+        geom_vline(data = today,
+                   mapping = aes(xintercept = date),
+                   color = 'darkmagenta',
+                   alpha = 0.5,
+                   size = 1) +
         geom_text(data = today,                          # Annotate today line
                   mapping = aes(x = date,
                                 y = 0,
