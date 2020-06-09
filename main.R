@@ -8,9 +8,7 @@
 library(squire)
 library(tidyverse)
 
-source("./data.R")
-#source("./shiny_ui.R")
-#source("./shiny_server.R")
+source("./load_data.R")
 source("./squire_backend.R")
 
 

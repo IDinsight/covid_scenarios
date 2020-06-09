@@ -10,7 +10,7 @@ library(squire)
 library(tidyverse)
 library(shiny)
 
-source("./data.R")
+source("./load_data.R")
 source("./shiny_harness.R")
 source("./shiny_server.R")
 source("./squire_backend.R")
