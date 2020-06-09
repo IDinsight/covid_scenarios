@@ -26,6 +26,7 @@ get_server_func <- function(params) {
       
       params[['replicates']] <- 100
       params[['n_particles']] <- 100
+      params[['reporting_fraction']] <- input$reporting_fraction
       
       model <- get_calibrated_model(params)
       projection_params <- list(r = model, time_period = input$forecast)
@@ -56,6 +57,7 @@ get_server_func <- function(params) {
       
       params[['replicates']] <- 10
       params[['n_particles']] <- 10
+      params[['reporting_fraction']] <- input$reporting_fraction
       
       model <- get_calibrated_model(params)
       projection_params <- list(r = model, time_period = input$forecast)
