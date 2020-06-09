@@ -29,7 +29,8 @@ get_server_func <- function(params) {
       params[['reporting_fraction']] <- input$reporting_fraction
       
       model <- get_calibrated_model(params)
-      projection_params <- list(r = model, time_period = input$forecast)
+      projection_params <- list(r = model, 
+                                time_period = input$forecast)
       forecast <- do.call(squire::projections, projection_params)
       
       # Plot outputs
