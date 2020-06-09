@@ -41,10 +41,10 @@ get_hospital_bed_plot <- function(forecast, date_0, dates_to_annotate) {
   plot_ <- projection_plotting(r_list = list(forecast),
                       scenarios = c(""),
                       add_parms_to_scenarios = FALSE,
-                      var_select = c("hospital_occupancy"),
+                      var_select = c("hospital_demand"),
                       date_0 = as.Date(date_0),
                       x_var = "date") +
-    labs(title = "Projection for hospital bed occupancy")
+    labs(title = "Projection for hospital bed demand")
   
   plot_ <- add_common_elements(plot_,
                                forecast$parameters$hosp_bed_capacity, 
@@ -65,10 +65,10 @@ get_icu_plot <- function(forecast, date_0, dates_to_annotate) {
   plot_ <- projection_plotting(r_list = list(forecast),
                       scenarios = c(""),
                       add_parms_to_scenarios = FALSE,
-                      var_select = c("ICU_occupancy"),
+                      var_select = c("ICU_demand"),
                       date_0 = as.Date(date_0),
                       x_var = "date") +
-    labs(title = "Projection for ICU bed occupancy")
+    labs(title = "Projection for ICU bed demand")
   
   plot_ <- add_common_elements(plot_, 
                                forecast$parameters$ICU_bed_capacity, 
@@ -98,12 +98,11 @@ add_common_elements <- function(base_plot, capacity, dates_to_annotate) {
                  y = capacity * 1.05,
                  label = "80% bed capacity", size = 3,
                  fontface = 'italic', hjust = 0) +
-        geom_segment(data = dates_to_annotate,                # Add lockdown lines
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = capacity),
-                     color = 'darkgrey',
-                     alpha = 0.8,
-                     size = 1) +
+        geom_vline(data = dates_to_annotate,                  # Add lockdown lines
+                   mapping = aes(xintercept = date),
+                   color = 'darkgrey',
+                   alpha = 0.8,
+                   size = 1) +
         geom_text(data = dates_to_annotate,                   # Annotate lockdown lines
                   mapping = aes(x = date,
                                 y = capacity * 0.9,
@@ -111,12 +110,11 @@ add_common_elements <- function(base_plot, capacity, dates_to_annotate) {
                   size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
                   color = 'darkgrey', alpha = 0.8,
                   fontface = 'bold') +
-        geom_segment(data = today,
-                     mapping = aes(x = date, xend = date,
-                                   y = 0, yend = capacity),
-                     color = 'darkmagenta',
-                     alpha = 0.5,
-                     size = 1) +
+        geom_vline(data = today,
+                   mapping = aes(xintercept = date),
+                   color = 'darkmagenta',
+                   alpha = 0.5,
+                   size = 1) +
         geom_text(data = today,                          # Annotate today line
                   mapping = aes(x = date,
                                 y = 0,
@@ -130,8 +128,7 @@ add_common_elements <- function(base_plot, capacity, dates_to_annotate) {
         ) +
         theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                          hjust = 1)) +
-        scale_y_continuous(n.breaks = 8,
-                           limits = c(0, capacity * 1.1)) +
+        scale_y_continuous(n.breaks = 8,labels = comma) + 
         theme(legend.position = "none")    
   
   return(augmented_plot)

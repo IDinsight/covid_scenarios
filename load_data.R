@@ -13,7 +13,7 @@ get_population_by_age_vector <- function(state = 'DL') {
     stop("Only Delhi data available") 
   }
 
-  pop_dist <- read.csv("./data/delhi_pop.csv")
+  pop_dist <- read.csv("./data/01_model_input/delhi_pop.csv")
   
   pop_vector <- pop_dist$total_persons[-18] %>%  # exclude "age not stated" in row 18
     as.character %>% 
