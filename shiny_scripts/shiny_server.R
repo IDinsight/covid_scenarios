@@ -30,7 +30,9 @@ get_server_func <- function(params) {
       
       model <- get_calibrated_model(params)
       projection_params <- list(r = model, 
-                                time_period = input$forecast)
+                                time_period = input$forecast,
+                                tt_R0 = c(0, input$tt_R0), 
+                                R0_change = c(tail(model$parameters$R0_change, 1), input$R0_change_future))
       forecast <- do.call(squire::projections, projection_params)
       
       # Plot outputs
@@ -51,17 +53,20 @@ get_server_func <- function(params) {
     })
     
     # 2. Run TEST MODEL when button is pressed
-    observeEvent(input$run_test_model, { # THIS SECTION IS NEW AS OF 2020.06.01 - HS
+    observeEvent(input$run_test_model, { 
       
       # Create a Progress object
-      showModal(modalDialog("Running model. This may take a few minutes", footer = NULL))
+      showModal(modalDialog("Running test model. This may take a moment.", footer = NULL))
       
       params[['replicates']] <- 10
       params[['n_particles']] <- 10
       params[['reporting_fraction']] <- input$reporting_fraction
       
       model <- get_calibrated_model(params)
-      projection_params <- list(r = model, time_period = input$forecast)
+      projection_params <- list(r = model, 
+                                time_period = input$forecast,
+                                tt_R0 = c(0, input$tt_R0), 
+                                R0_change = c(tail(model$parameters$R0_change, 1), input$R0_change_future))
       forecast <- get_projection(projection_params)
       
       # Plot outputs
