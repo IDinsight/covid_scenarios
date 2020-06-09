@@ -19,9 +19,10 @@ set.seed(212)
 future::plan(future::multiprocess())
 
 # parameters
-FORECAST_DAYS = 7
+FORECAST_DAYS = 14
 R0_changes <- list("2020-03-24" = 0.2,
-                   "2020-05-03" = 0.5)
+                   "2020-05-03" = 0.5,
+                   "2020-06-06" = 0.75)
 
 params <- get_model_params(R0_changes, 'DL')
 
@@ -34,7 +35,7 @@ future_preds <- get_projection(projection_params)
 
 today <- data.frame(date = Sys.Date(), event = "Today")
 plotting_dates <- data.frame(date=as.Date(params[['date_R0_change']]),
-                             event=c("Lockdown 1.0", "Lockdown 3.0"))
+                             event=c("Lockdown 1.0", "Lockdown 3.0", "Unlock 1.0"))
 
 # Generate plots
 get_daily_death_plot(model)

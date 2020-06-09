@@ -17,7 +17,7 @@ get_server_func <- function(params) {
     # Create reactive output that updates based on which button is pressed
     model_output <- reactiveValues(model = NULL)
     dates_to_annotate <- data.frame(date=as.Date(params[['date_R0_change']]),
-                                    event=c("Lockdown 1.0", "Lockdown 3.0"))
+                                    event=c("Lockdown 1.0", "Lockdown 3.0", "Unlock 1.0"))
     
     
     observeEvent(input$run_model, { 
