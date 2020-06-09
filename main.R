@@ -9,7 +9,7 @@ library(squire)
 library(tidyverse)
 
 source("./load_data.R")
-source("./squire_backend.R")
+source("./squire_scripts/squire_backend.R")
 
 
 #-----------------------------------------------#
@@ -20,9 +20,9 @@ future::plan(future::multiprocess())
 
 # parameters
 FORECAST_DAYS = 14
-R0_changes <- list("2020-03-24" = 0.2,
-                   "2020-05-03" = 0.5,
-                   "2020-06-06" = 0.75)
+R0_changes <- list("2020-03-24" = 0.5,
+                   "2020-05-03" = 0.7,
+                   "2020-06-06" = 0.8)
 
 params <- get_model_params(R0_changes, 'DL')
 

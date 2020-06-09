@@ -11,9 +11,9 @@ library(tidyverse)
 library(shiny)
 
 source("./load_data.R")
-source("./shiny_ui.R")
-source("./shiny_server.R")
-source("./squire_backend.R")
+source("./shiny_scripts/shiny_ui.R")
+source("./shiny_scripts/shiny_server.R")
+source("./squire_scripts/squire_backend.R")
 
 #-----------------------------------------------#
 # Setup environment and data                    #
@@ -22,9 +22,9 @@ source("./squire_backend.R")
 set.seed(212)
 future::plan(future::multiprocess())
 
-R0_changes <- list("2020-03-24" = 0.2,
-                   "2020-05-03" = 0.5,
-                   "2020-06-06" = 0.75)
+R0_changes <- list("2020-03-24" = 0.5,
+                   "2020-05-03" = 0.7,
+                   "2020-06-06" = 0.8)
 
 params <- get_model_params(R0_changes, 'DL')
 
