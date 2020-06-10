@@ -142,6 +142,7 @@ get_simulator_input_panel <- function() {
                             inputId = "R0_change_future",
                             min = 0.0,
                             max = 1.0,
+                            step = 0.05,
                             value = NULL),
                bsTooltip("R0_change_future", "Estimate how the next phase will change R0. E.g., if R0 will reduce to 20% of unabated value, enter 0.2.",
                          placement = "right", trigger = "hover"),

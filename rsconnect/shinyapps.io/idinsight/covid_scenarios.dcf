@@ -5,8 +5,9 @@ account: idinsight
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2387197
-bundleId: 3249653
+bundleId: 3249664
 url: https://idinsight.shinyapps.io/covid_scenarios/
-when: 1591753600.81257
+when: 1591753858.38072
 asMultiple: FALSE
 asStatic: FALSE
+ignoredFiles: archive|playground
