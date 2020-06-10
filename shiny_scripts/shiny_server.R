@@ -29,10 +29,22 @@ get_server_func <- function(params) {
       params[['reporting_fraction']] <- input$reporting_fraction
       
       model <- get_calibrated_model(params)
+      
+      # If user gave no input for tt_R0 or R0_change_future (shiny reads
+      # these values as logical NA), make sure that the projection reads
+      # them as NULL values.
+      ifelse (class(input$tt_R0) == "logical",
+              tt_R0 <- c(0),
+              tt_R0 <- c(0, input$tt_R0)) 
+      
+      ifelse (class(input$R0_change_future) == "logical",
+              R0_change_future <- c(tail(model$interventions$R0_change, 1)),
+              R0_change_future <- c(tail(model$interventions$R0_change, 1), input$R0_change_future)) 
+      
       projection_params <- list(r = model, 
                                 time_period = input$forecast,
-                                tt_R0 = c(0, input$tt_R0), 
-                                R0_change = c(tail(model$interventions$R0_change, 1), input$R0_change_future))
+                                tt_R0 = tt_R0, 
+                                R0_change = R0_change_future)
       forecast <- do.call(squire::projections, projection_params)
       
       # Plot outputs
@@ -62,11 +74,26 @@ get_server_func <- function(params) {
       params[['n_particles']] <- 10
       params[['reporting_fraction']] <- input$reporting_fraction
       
+      print(input$tt_R0)
+      print(class(input$tt_R0))
+      
       model <- get_calibrated_model(params)
+      
+      # If user gave no input for tt_R0 or R0_change_future (shiny reads
+      # these values as logical NA), make sure that the projection reads
+      # them as NULL values.
+      ifelse (class(input$tt_R0) == "logical",
+              tt_R0 <- c(0),
+              tt_R0 <- c(0, input$tt_R0)) 
+      
+      ifelse (class(input$R0_change_future) == "logical",
+              R0_change_future <- c(tail(model$interventions$R0_change, 1)),
+              R0_change_future <- c(tail(model$interventions$R0_change, 1), input$R0_change_future)) 
+      
       projection_params <- list(r = model, 
                                 time_period = input$forecast,
-                                tt_R0 = c(0, input$tt_R0), 
-                                R0_change = c(tail(model$interventions$R0_change, 1), input$R0_change_future)
+                                tt_R0 = tt_R0, 
+                                R0_change = R0_change_future
                                 )
       forecast <- get_projection(projection_params)
       
