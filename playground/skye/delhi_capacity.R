@@ -11,7 +11,7 @@ library(scales)
 
 set.seed(212)
 
-pop_dist <- read.csv("./data/delhi_pop.csv")
+pop_dist <- read.csv("./data/01_model_input/delhi_pop.csv")
 
 pop_vector <- pop_dist$total_persons[-18] %>%  # exclude "age not stated" in row 18
   as.character %>% 
@@ -87,62 +87,6 @@ out <- calibrate(
   R0_change = int_unique$R0_change,
   baseline_hosp_bed_capacity = hosp_bed, 
   baseline_ICU_bed_capacity = ICU_bed,
-)
-
-# Same model, but projecting only 2 weeks
-
-# Fit model
-out1 <- calibrate(
-  reporting_fraction = 1,
-  data = df,
-  R0_min = 2,
-  R0_max = 7,
-  R0_step = 0.5,
-  first_start_date = "2020-03-02",
-  last_start_date = "2020-03-12",
-  day_step = 1,
-  replicates = 100,  # Make sure this is 100 if final
-  n_particles = 100, # Make sure this is 100 if final
-  population = pop_vector,
-  forecast = 14, # 70 
-  baseline_contact_matrix = squire_matrix,
-  date_R0_change = int_unique$dates_change,
-  R0_change = int_unique$R0_change,
-  baseline_hosp_bed_capacity = hosp_bed, 
-  baseline_ICU_bed_capacity = ICU_bed
-)
-
-# SECOND MODEL: 
-  # Mar 23 to May 03 with phase1_matrix;
-  # May 03 onwards with phase3_matrix;
-  # death reporting_fraction = 1.0.
-  # As the output of this one doesn't seem to
-  # fit the data, we're not using it for now.
-
-int_unique2 <- list(dates_change = c(phase1, phase3), 
-                    matrix_change = list(
-                      data.matrix(phase1_matrix), 
-                      data.matrix(phase3_matrix))
-                   )
-
-out2 <- calibrate(
-  reporting_fraction = 1,
-  data = df,
-  R0_min = 1,
-  R0_max = 7,
-  R0_step = 0.5,
-  first_start_date = "2020-03-02",
-  last_start_date = "2020-03-12",
-  day_step = 1,
-  replicates = 20,  # Make sure this is 100 if final
-  n_particles = 20, # Make sure this is 100 if final
-  population = pop_vector,
-  forecast = 14, 
-  baseline_contact_matrix = squire_matrix,
-  contact_matrix_set = int_unique1$matrix_change,            # Ensure refers to right int_unique!
-  date_contact_matrix_set_change = int_unique1$dates_change, # Ensure refers to right int_unique!
-  baseline_hosp_bed_capacity = hosp_bed, 
-  baseline_ICU_bed_capacity = ICU_bed,   
 )
 
 ######################################### PLOTTING
@@ -310,11 +254,8 @@ hosp_bed_capacity_change <- c(1, input.hosp_bed_capacity_change)
 ICU_bed_capacity_change <- c(1, input.ICU_bed_capacity_change)
 
 p <- projections(r = out, 
-                 time_period = 14,
-                 hosp_bed_capacity_change = 1, 
-                 tt_hosp_beds = 0,
-                 ICU_bed_capacity_change = 1, 
-                 tt_ICU_beds = 0,
+                 tt_R0 = c(0, 7),
+                 R0_change = c(tail())
                  )
 
 projection_plotting(

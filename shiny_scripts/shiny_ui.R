@@ -12,7 +12,7 @@ library(shinyBS)
 #' @param name The name to be used for the app
 #' @retun ui object
 get_ui <- function(name) {
-  intro_text = read_file("./shiny_scripts/shiny_assets/introduction.txt") 
+  intro_text = "./shiny_scripts/shiny_assets/introduction.html" 
   tabs <- list(get_overview_tab(intro_text), get_simulator_tab())
   ui <- get_tabbed_ui(name, tabs)
   
@@ -47,7 +47,7 @@ get_overview_tab <- function(intro_text) {
            
            mainPanel(
              fluidRow(
-               column(10, intro_text)
+               column(10, includeHTML(intro_text))
              )
            )
         )
@@ -124,25 +124,25 @@ get_simulator_input_panel <- function() {
                #              value = 0.8),
                # bsTooltip("reporting_fraction", "Proportion of true deaths represented by reported deaths (0.0-1.0)",
                #           placement = "right", trigger = "hover"),
-               # numericInput(label = "Number of days to forecast",
-               #              inputId = "forecast",
-               #              min = 2,
-               #              max = 14,
-               #              step = 1,
-               #              value = 2),
+               numericInput(label = "Number of days to forecast",
+                            inputId = "forecast",
+                            min = 2,
+                            max = 14,
+                            step = 1,
+                            value = 2),
                numericInput(label = "Days until next lock/unlock phase (if any):",
                             inputId = "tt_R0",
                             min = 0, 
                             max = 21,
                             step = 1,
-                            value = NULL),
+                            value = 0),
                bsTooltip("tt_R0", "Number of days until change in lockdown conditions",
                          placement = "right", trigger = "hover"),
                numericInput(label = "R0 ratio during next lock/unlock phase (if any):",
                             inputId = "R0_change_future",
                             min = 0.0,
                             max = 1.0,
-                            value = NULL),
+                            value = 0.75),
                bsTooltip("R0_change_future", "Estimate how the next phase will change R0. E.g., if R0 will reduce to 20% of unabated value, enter 0.2.",
                          placement = "right", trigger = "hover"),
                numericInput(label = "Reporting fraction:",

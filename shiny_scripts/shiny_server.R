@@ -32,7 +32,7 @@ get_server_func <- function(params) {
       projection_params <- list(r = model, 
                                 time_period = input$forecast,
                                 tt_R0 = c(0, input$tt_R0), 
-                                R0_change = c(tail(model$parameters$R0_change, 1), input$R0_change_future))
+                                R0_change = c(tail(model$interventions$R0_change, 1), input$R0_change_future))
       forecast <- do.call(squire::projections, projection_params)
       
       # Plot outputs
@@ -66,7 +66,8 @@ get_server_func <- function(params) {
       projection_params <- list(r = model, 
                                 time_period = input$forecast,
                                 tt_R0 = c(0, input$tt_R0), 
-                                R0_change = c(tail(model$parameters$R0_change, 1), input$R0_change_future))
+                                R0_change = c(tail(model$interventions$R0_change, 1), input$R0_change_future)
+                                )
       forecast <- get_projection(projection_params)
       
       # Plot outputs
