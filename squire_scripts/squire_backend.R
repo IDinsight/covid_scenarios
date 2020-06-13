@@ -91,45 +91,45 @@ add_common_elements <- function(base_plot, capacity, dates_to_annotate) {
   
   today <- data.frame(date = Sys.Date(), event = "Today")
   augmented_plot <- base_plot + 
-        ylab("No. of beds") +
-        xlab("Date") +
-        geom_hline(yintercept = capacity, linetype = 4) +   # show bed capacity line
-        annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
-                 y = capacity * 1.05,
-                 label = "80% bed capacity", size = 3,
-                 fontface = 'italic', hjust = 0) +
-        geom_vline(data = dates_to_annotate,                  # Add lockdown lines
-                   mapping = aes(xintercept = date),
-                   color = 'darkgrey',
-                   alpha = 0.8,
-                   size = 1) +
-        geom_text(data = dates_to_annotate,                   # Annotate lockdown lines
-                  mapping = aes(x = date,
-                                y = capacity * 0.9,
-                                label = event),
-                  size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
-                  color = 'darkgrey', alpha = 0.8,
-                  fontface = 'bold') +
-        geom_vline(data = today,
-                   mapping = aes(xintercept = date),
-                   color = 'darkmagenta',
-                   alpha = 0.5,
-                   size = 1) +
-        geom_text(data = today,                          # Annotate today line
-                  mapping = aes(x = date,
-                                y = 0,
-                                label = event),
-                  size = 3, angle = 90, vjust = -0.5, hjust = 0,
-                  color = 'darkmagenta', alpha = 0.5,
-                  fontface = 'italic') +
-        scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
-                     date_labels = "%b %d",               # mark x-ticks w/ month, day
-                     date_minor_breaks = "1 week"         # unmarked grid lines for each week
-        ) +
-        theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
-                                         hjust = 1)) +
-        scale_y_continuous(n.breaks = 8,labels = comma) + 
-        theme(legend.position = "none")    
+    ylab("No. of beds") +
+    xlab("Date") +
+    geom_hline(yintercept = capacity, linetype = 4) +   # show bed capacity line
+    annotate("text", x = as.Date("2020-03-01"),        # show bed capacity text
+             y = capacity * 1.05,
+             label = "80% bed capacity", size = 3,
+             fontface = 'italic', hjust = 0) +
+    geom_vline(data = dates_to_annotate,                  # Add lockdown lines
+               mapping = aes(xintercept = date),
+               color = 'darkgrey',
+               alpha = 0.8,
+               size = 1) +
+    geom_text(data = dates_to_annotate,                   # Annotate lockdown lines
+              mapping = aes(x = date,
+                            y = capacity * 0.9,
+                            label = event),
+              size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
+              color = 'darkgrey', alpha = 0.8,
+              fontface = 'bold') +
+    geom_vline(data = today,
+               mapping = aes(xintercept = date),
+               color = 'darkmagenta',
+               alpha = 0.5,
+               size = 1) +
+    geom_text(data = today,                          # Annotate today line
+              mapping = aes(x = date,
+                            y = 0,
+                            label = event),
+              size = 3, angle = 90, vjust = -0.5, hjust = 0,
+              color = 'darkmagenta', alpha = 0.5,
+              fontface = 'italic') +
+    scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
+                 date_labels = "%b %d",               # mark x-ticks w/ month, day
+                 date_minor_breaks = "1 week"         # unmarked grid lines for each week
+    ) +
+    theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
+                                     hjust = 1)) +
+    scale_y_continuous(n.breaks = 8,labels = comma) + 
+    theme(legend.position = "none")    
   
   return(augmented_plot)
 }
@@ -154,4 +154,54 @@ get_daily_death_plot <- function(model) {
              max(model$scan_results$inputs$data$deaths) * 0.15))
   
   return(plot_)
+}
+
+#' Add common ggplot layers to plot for the deaths projection.
+#' 
+#' @param base_plot a ggplot object
+#' @param capacity Where to draw the maximum capacity line
+#' @param dates_to_annotate Dates to annotate. 
+#'        A data.frame with two columns: date, event.
+#' @return ggplot object
+
+add_elements_deaths <- function(base_plot, capacity, dates_to_annotate) {
+  
+  today <- data.frame(date = Sys.Date(), event = "Today")
+  augmented_plot <- base_plot + 
+    ylab("No. of deaths per day") +
+    xlab("Date") +
+    geom_vline(data = dates_to_annotate,                  # Add lockdown lines
+               mapping = aes(xintercept = date),
+               color = 'darkgrey',
+               alpha = 0.8,
+               size = 1) +
+    geom_text(data = dates_to_annotate,                   # Annotate lockdown lines
+              mapping = aes(x = date,
+                            y = capacity * 0.9,
+                            label = event),
+              size = 3, angle = 90, vjust = -0.5, hjust = 0.9,
+              color = 'darkgrey', alpha = 0.8,
+              fontface = 'bold') +
+    geom_vline(data = today,
+               mapping = aes(xintercept = date),
+               color = 'darkmagenta',
+               alpha = 0.5,
+               size = 1) +
+    geom_text(data = today,                          # Annotate today line
+              mapping = aes(x = date,
+                            y = 0,
+                            label = event),
+              size = 3, angle = 90, vjust = -0.5, hjust = 0,
+              color = 'darkmagenta', alpha = 0.5,
+              fontface = 'italic') +
+    scale_x_date(date_breaks = "2 week",              # x-tick every 2 weeks
+                 date_labels = "%b %d",               # mark x-ticks w/ month, day
+                 date_minor_breaks = "1 week"         # unmarked grid lines for each week
+    ) +
+    theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
+                                     hjust = 1)) +
+    scale_y_continuous(n.breaks = 8,labels = comma) + 
+    theme(legend.position = "none")    
+  
+  return(augmented_plot)
 }
