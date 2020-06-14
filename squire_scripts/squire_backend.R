@@ -36,15 +36,20 @@ get_projection <- function(input_params) {
 #' @param dates_to_annotate Dates to annotate. 
 #'        A data.frame with two columns: date, event.
 #' @return ggplot object
-get_hospital_bed_plot <- function(forecast, date_0, dates_to_annotate) {
+get_hospital_bed_plot <- function(forecast, date_0, dates_to_annotate, title = NA) {
   today <- data.frame(date = Sys.Date(), event = "Today")
   plot_ <- projection_plotting(r_list = list(forecast),
                       scenarios = c(""),
                       add_parms_to_scenarios = FALSE,
                       var_select = c("hospital_demand"),
                       date_0 = as.Date(date_0),
-                      x_var = "date") +
-    labs(title = "Projection for hospital bed demand")
+                      x_var = "date")
+  
+  if (is.na(title)) {
+    plot_ <- plot_ + labs(title = "Projection for hospital bed demand")
+  } else {
+    plot_ <- plot_ + labs(title = title)
+  }
   
   plot_ <- add_common_elements(plot_,
                                forecast$parameters$hosp_bed_capacity, 
@@ -156,6 +161,26 @@ get_daily_death_plot <- function(model) {
   return(plot_)
 }
 
+#' Get daily death projections
+#' 
+get_daily_death_projections <- function(forecast, date_0, dates_to_annotate, title, deaths_annotation) {
+  plot_ <- projection_plotting(r_list = list(forecast),
+                               scenarios = c(""),
+                               add_parms_to_scenarios = FALSE,
+                               var_select = c("deaths"),
+                               date_0 = as.Date(date_0),
+                               x_var = "date") + 
+          ggtitle(title) +
+          ylim(0,3000)
+  
+  plot_ <- add_elements_deaths(plot_, capacity = forecast$parameters$ICU_bed_capacity, 
+                               dates_to_annotate = dates_to_annotate) +
+    labs(subtitle = deaths_annotation) + 
+    theme(plot.subtitle=element_text(color="darkred"))
+  
+  return(plot_)
+}
+
 #' Add common ggplot layers to plot for the deaths projection.
 #' 
 #' @param base_plot a ggplot object
@@ -200,8 +225,8 @@ add_elements_deaths <- function(base_plot, capacity, dates_to_annotate) {
     ) +
     theme(axis.text.x = element_text(angle = 45,      # x-axis on 45 deg angle
                                      hjust = 1)) +
-    scale_y_continuous(n.breaks = 8,labels = comma) + 
-    theme(legend.position = "none")    
+    scale_y_continuous(n.breaks = 8,labels = comma, limits = c(0, 3000)) + 
+    theme(legend.position = "none") 
   
   return(augmented_plot)
 }
